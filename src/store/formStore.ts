@@ -106,9 +106,12 @@ export const useFormStore = create<FormState>()(
           isComplete: true,
         });
         // Write to Firestore in the background
-        firestoreAdd(submission).catch((err) =>
-          console.error("Failed to save submission:", err)
-        );
+        firestoreAdd(submission)
+          .then(() => console.log("Submission saved to Firestore:", submission.id))
+          .catch((err) => {
+            console.error("Failed to save submission:", err);
+            alert("Error saving to database: " + (err as Error).message);
+          });
       },
 
       resetForm: () =>
@@ -127,6 +130,7 @@ export const useFormStore = create<FormState>()(
           set({ submissions, isLoadingSubmissions: false });
         } catch (err) {
           console.error("Failed to load submissions:", err);
+          alert("Error loading submissions: " + (err as Error).message);
           set({ isLoadingSubmissions: false });
         }
       },
