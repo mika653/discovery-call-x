@@ -76,8 +76,14 @@ export function generateSummary(answers: FormAnswers): SubmissionSummary {
   if (getAnswer(answers, "needs_reservations") !== "no") {
     suggestedFeatures.push("Online Booking / Reservation System");
   }
-  if (getAnswer(answers, "needs_ordering") !== "no") {
-    suggestedFeatures.push("Online Ordering / E-Commerce");
+  const orderingType = getAnswer(answers, "needs_ordering");
+  if (orderingType && orderingType !== "no") {
+    const label = orderingType === "services"
+      ? "Service Request / Quote System"
+      : orderingType === "both"
+        ? "E-Commerce & Service Request System"
+        : "Online Ordering / E-Commerce";
+    suggestedFeatures.push(label);
   }
   if (getAnswer(answers, "needs_events") !== "no") {
     suggestedFeatures.push("Events Calendar");

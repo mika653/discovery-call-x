@@ -140,11 +140,20 @@ export function generateProposal(answers: FormAnswers): Proposal {
     });
   }
 
-  if (getAnswer(answers, "needs_ordering") !== "no") {
+  const orderingType = getAnswer(answers, "needs_ordering");
+  if (orderingType && orderingType !== "no") {
     const details = getAnswer(answers, "ordering_details");
+    const isServices = orderingType === "services";
+    const isBoth = orderingType === "both";
     features.push({
-      name: "Online Ordering / E-Commerce",
-      description: `Secure online ordering system${details ? ` for ${details}` : ""} with payment processing and order management.`,
+      name: isServices
+        ? "Service Request / Quote System"
+        : isBoth
+          ? "E-Commerce & Service Request System"
+          : "Online Ordering / E-Commerce",
+      description: isServices
+        ? `A structured inquiry and quote request system${details ? ` for ${details}` : ""} so potential clients can easily describe their project needs.`
+        : `Secure online ${isBoth ? "store and service request system" : "ordering system"}${details ? ` for ${details}` : ""} with payment processing and order management.`,
     });
   }
 
@@ -272,7 +281,7 @@ export function generateProposal(answers: FormAnswers): Proposal {
   // 6. Timeline
   const hasEcommerce =
     goalValues.includes("ecommerce") ||
-    getAnswer(answers, "needs_ordering") === "yes";
+    ["products", "both"].includes(getAnswer(answers, "needs_ordering"));
   const featureCount = features.length;
 
   const timeline = [
