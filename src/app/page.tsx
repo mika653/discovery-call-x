@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useFormStore } from "@/store/formStore";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import ProgressBar from "@/components/ProgressBar";
 import QuestionCard from "@/components/QuestionCard";
 import ResultsPage from "@/components/ResultsPage";
+import ProposalPage from "@/components/ProposalPage";
+import { generateProposal, proposalToText } from "@/lib/proposal";
 
 export default function Home() {
   const {
@@ -22,6 +25,8 @@ export default function Home() {
     resetForm,
   } = useFormStore();
 
+  const [showProposal, setShowProposal] = useState(false);
+
   const visibleQuestions = getVisibleQuestions();
 
   // Welcome screen
@@ -33,9 +38,29 @@ export default function Home() {
     );
   }
 
+  // Proposal view
+  if (isComplete && currentSubmission && showProposal) {
+    const proposal = generateProposal(currentSubmission.answers);
+    const plainText = proposalToText(proposal, currentSubmission.businessName);
+    return (
+      <ProposalPage
+        proposal={proposal}
+        businessName={currentSubmission.businessName}
+        plainText={plainText}
+        onBack={() => setShowProposal(false)}
+      />
+    );
+  }
+
   // Results page
   if (isComplete && currentSubmission) {
-    return <ResultsPage submission={currentSubmission} onReset={resetForm} />;
+    return (
+      <ResultsPage
+        submission={currentSubmission}
+        onReset={resetForm}
+        onViewProposal={() => setShowProposal(true)}
+      />
+    );
   }
 
   // Questionnaire

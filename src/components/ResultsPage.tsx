@@ -6,6 +6,7 @@ import { Submission } from "@/types";
 interface ResultsPageProps {
   submission: Submission;
   onReset: () => void;
+  onViewProposal: () => void;
 }
 
 const fadeIn = {
@@ -52,7 +53,7 @@ function Tag({ children, variant = "default" }: { children: React.ReactNode; var
   );
 }
 
-export default function ResultsPage({ submission, onReset }: ResultsPageProps) {
+export default function ResultsPage({ submission, onReset, onViewProposal }: ResultsPageProps) {
   const { summary } = submission;
 
   return (
@@ -236,8 +237,18 @@ export default function ResultsPage({ submission, onReset }: ResultsPageProps) {
             Print / Save PDF
           </button>
           <button
+            onClick={onViewProposal}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-white font-medium text-sm hover:bg-accent-light transition-colors shadow-lg shadow-accent/20"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 2h8l4 4v8a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5 9h6M5 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            View Client Proposal
+          </button>
+          <button
             onClick={onReset}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-white font-medium text-sm hover:bg-accent-light transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-border text-foreground font-medium text-sm hover:border-accent/30 transition-colors"
           >
             Start New Discovery
           </button>
