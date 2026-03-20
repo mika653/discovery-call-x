@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useFormStore } from "@/store/formStore";
 import { Submission, LeadStatus } from "@/types";
 import { questions } from "@/lib/questions";
@@ -109,12 +109,12 @@ export default function AdminDashboard() {
                 {submissions.length !== 1 ? "s" : ""}
               </p>
             </div>
-            <Button variant="ghost" asChild>
-              <a href="/">
+            <a href="/">
+              <Button variant="ghost">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Form
-              </a>
-            </Button>
+              </Button>
+            </a>
           </div>
         </div>
       </div>
