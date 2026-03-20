@@ -8,6 +8,7 @@ import {
   updateTenantSubmissionStatus,
   deleteTenantSubmissionDoc,
 } from "@/lib/tenant-firestore";
+import { demoSubmissions } from "@/lib/demo-submissions";
 import { v4 as uuidv4 } from "uuid";
 
 interface TenantFormState {
@@ -132,11 +133,24 @@ export const useTenantFormStore = create<TenantFormState>()((set, get) => ({
     const { tenantSlug } = get();
     set({ isLoadingSubmissions: true });
     try {
-      const submissions = await getTenantSubmissions(tenantSlug);
+      let submissions = await getTenantSubmissions(tenantSlug);
+      // Seed demo data if the demo tenant has no real submissions
+      if (submissions.length === 0 && tenantSlug === "demo") {
+        submissions = demoSubmissions;
+        // Persist seed data to Firestore in background
+        for (const sub of demoSubmissions) {
+          addTenantSubmission("demo", sub).catch(() => {});
+        }
+      }
       set({ submissions, isLoadingSubmissions: false });
     } catch (err) {
       console.error("Failed to load tenant submissions:", err);
-      set({ isLoadingSubmissions: false });
+      // Offline fallback for demo
+      if (tenantSlug === "demo") {
+        set({ submissions: demoSubmissions, isLoadingSubmissions: false });
+      } else {
+        set({ isLoadingSubmissions: false });
+      }
     }
   },
 
