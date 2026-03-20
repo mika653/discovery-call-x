@@ -92,7 +92,7 @@ export default function ProposalPage({
                     strokeLinejoin="round"
                   />
                 </svg>
-                Back to Summary
+                Go Back
               </button>
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                 Client Proposal

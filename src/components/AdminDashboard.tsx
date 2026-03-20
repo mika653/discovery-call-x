@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useFormStore } from "@/store/formStore";
 import { Submission, LeadStatus } from "@/types";
 import { questions } from "@/lib/questions";
+import { generateProposal, proposalToText } from "@/lib/proposal";
+import ProposalPage from "@/components/ProposalPage";
 
 const statusColors: Record<LeadStatus, string> = {
   new: "bg-blue-50 text-blue-700 border-blue-200",
@@ -44,12 +46,28 @@ export default function AdminDashboard() {
   const { submissions, updateLeadStatus, deleteSubmission } = useFormStore();
   const [selectedSubmission, setSelectedSubmission] =
     useState<Submission | null>(null);
+  const [proposalSubmission, setProposalSubmission] =
+    useState<Submission | null>(null);
   const [filterStatus, setFilterStatus] = useState<LeadStatus | "all">("all");
 
   const filtered =
     filterStatus === "all"
       ? submissions
       : submissions.filter((s) => s.status === filterStatus);
+
+  // Proposal view for a submission
+  if (proposalSubmission) {
+    const proposal = generateProposal(proposalSubmission.answers);
+    const plainText = proposalToText(proposal, proposalSubmission.businessName);
+    return (
+      <ProposalPage
+        proposal={proposal}
+        businessName={proposalSubmission.businessName}
+        plainText={plainText}
+        onBack={() => setProposalSubmission(null)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-surface">
@@ -165,6 +183,19 @@ export default function AdminDashboard() {
                           </option>
                         ))}
                       </select>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProposalSubmission(submission);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/5 text-accent text-xs font-medium hover:bg-accent/10 transition-colors"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                          <path d="M2 2h8l4 4v8a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M5 9h6M5 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                        </svg>
+                        Proposal
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -297,6 +328,23 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Generate Proposal Button */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setSelectedSubmission(null);
+                      setProposalSubmission(selectedSubmission);
+                    }}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-accent text-white font-medium text-sm hover:bg-accent-light transition-colors shadow-lg shadow-accent/20"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M2 2h8l4 4v8a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M5 9h6M5 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                    Generate Proposal
+                  </button>
                 </div>
 
                 {/* All Answers */}
