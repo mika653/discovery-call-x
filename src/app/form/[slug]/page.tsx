@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { AnimatePresence } from "framer-motion";
 import { TenantConfig } from "@/types/tenant";
@@ -12,9 +12,9 @@ import TenantWelcomeScreen from "@/components/TenantWelcomeScreen";
 import TenantResultsPage from "@/components/TenantResultsPage";
 import ProgressBar from "@/components/ProgressBar";
 import QuestionCard from "@/components/QuestionCard";
-import { Loader2 } from "lucide-react";
+import IntroAnimation from "@/components/IntroAnimation";
 
-// Local fallback configs for known demo slugs
+// Local configs — render instantly, no Firestore wait
 const localConfigs: Record<string, TenantConfig> = {
   demo: demoTenant,
   ...Object.fromEntries(sampleTenants.map((t) => [t.slug, t])),
@@ -23,9 +23,12 @@ const localConfigs: Record<string, TenantConfig> = {
 export default function TenantFormPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const [config, setConfig] = useState<TenantConfig | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  // Use local config immediately if available
+  const localConfig = localConfigs[slug] || null;
+  const [config, setConfig] = useState<TenantConfig | null>(localConfig);
   const [notFound, setNotFound] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
 
   const {
     init,
@@ -42,20 +45,24 @@ export default function TenantFormPage() {
     resetForm,
   } = useTenantFormStore();
 
+  // Initialize immediately if we have a local config
   useEffect(() => {
+    if (localConfig) {
+      init(localConfig);
+    }
+  }, [localConfig, init]);
+
+  // For unknown slugs, fetch from Firestore
+  useEffect(() => {
+    if (localConfig) {
+      // Sync local config to Firestore in background
+      saveTenantConfig(localConfig).catch(() => {});
+      return;
+    }
+
     async function load() {
       try {
-        // Try Firestore first
-        let tenantConfig = await getTenantConfig(slug);
-        if (!tenantConfig) {
-          // Fall back to local demo configs
-          const local = localConfigs[slug];
-          if (local) {
-            tenantConfig = local;
-            // Seed to Firestore for persistence
-            saveTenantConfig(local).catch(() => {});
-          }
-        }
+        const tenantConfig = await getTenantConfig(slug);
         if (tenantConfig) {
           setConfig(tenantConfig);
           init(tenantConfig);
@@ -63,29 +70,17 @@ export default function TenantFormPage() {
           setNotFound(true);
         }
       } catch {
-        // Network error — try local fallback
-        const local = localConfigs[slug];
-        if (local) {
-          setConfig(local);
-          init(local);
-        } else {
-          setNotFound(true);
-        }
+        setNotFound(true);
       }
-      setLoading(false);
     }
     load();
-  }, [slug, init]);
+  }, [slug, localConfig, init]);
 
-  if (loading) {
-    return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  const handleIntroComplete = useCallback(() => {
+    setShowIntro(false);
+  }, []);
 
-  if (notFound || !config) {
+  if (notFound) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-background px-6">
         <div className="text-center">
@@ -98,10 +93,28 @@ export default function TenantFormPage() {
     );
   }
 
+  if (!config) {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-muted-foreground/20 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   const visibleQuestions = getVisibleQuestions();
 
   return (
     <TenantProvider config={config}>
+      {/* Premium intro animation */}
+      {showIntro && (
+        <IntroAnimation
+          brandName={config.businessName}
+          brandColor={config.brandColors.primary}
+          logoUrl={config.logoUrl}
+          onComplete={handleIntroComplete}
+        />
+      )}
+
       {/* Welcome screen */}
       {currentStep === -1 && !isComplete && (
         <AnimatePresence mode="wait">

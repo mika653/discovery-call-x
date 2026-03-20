@@ -7,7 +7,6 @@ import { TenantProvider } from "@/lib/tenant-context";
 import { getTenantConfig, saveTenantConfig } from "@/lib/tenant-firestore";
 import { demoTenant, sampleTenants } from "@/lib/demo-tenant";
 import TenantAdminDashboard from "@/components/TenantAdminDashboard";
-import { Loader2 } from "lucide-react";
 
 const localConfigs: Record<string, TenantConfig> = {
   demo: demoTenant,
@@ -17,48 +16,33 @@ const localConfigs: Record<string, TenantConfig> = {
 export default function TenantDashboardPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const [config, setConfig] = useState<TenantConfig | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const localConfig = localConfigs[slug] || null;
+  const [config, setConfig] = useState<TenantConfig | null>(localConfig);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
+    if (localConfig) {
+      saveTenantConfig(localConfig).catch(() => {});
+      return;
+    }
+
     async function load() {
       try {
-        let tenantConfig = await getTenantConfig(slug);
-        if (!tenantConfig) {
-          const local = localConfigs[slug];
-          if (local) {
-            tenantConfig = local;
-            saveTenantConfig(local).catch(() => {});
-          }
-        }
+        const tenantConfig = await getTenantConfig(slug);
         if (tenantConfig) {
           setConfig(tenantConfig);
         } else {
           setNotFound(true);
         }
       } catch {
-        const local = localConfigs[slug];
-        if (local) {
-          setConfig(local);
-        } else {
-          setNotFound(true);
-        }
+        setNotFound(true);
       }
-      setLoading(false);
     }
     load();
-  }, [slug]);
+  }, [slug, localConfig]);
 
-  if (loading) {
-    return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (notFound || !config) {
+  if (notFound) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-background px-6">
         <div className="text-center">
@@ -67,6 +51,14 @@ export default function TenantDashboardPage() {
             No dashboard found for &quot;{slug}&quot;.
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (!config) {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-muted-foreground/20 border-t-primary rounded-full animate-spin" />
       </div>
     );
   }
