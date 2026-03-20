@@ -24,7 +24,7 @@ export default function ResultsPage({ submission, onReset }: ResultsPageProps) {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-50 mb-8"
+          className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/15 mb-8"
         >
           <CheckCircle2 className="h-9 w-9 text-success" />
         </motion.div>
