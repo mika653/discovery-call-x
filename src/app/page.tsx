@@ -9,6 +9,7 @@ import QuestionCard from "@/components/QuestionCard";
 import ResultsPage from "@/components/ResultsPage";
 import ProposalPage from "@/components/ProposalPage";
 import { generateProposal, proposalToText } from "@/lib/proposal";
+import { playKaching } from "@/lib/sounds";
 
 export default function Home() {
   const {
@@ -92,7 +93,7 @@ export default function Home() {
             onPrev={prevStep}
             isFirst={currentStep === 0}
             isLast={currentStep === visibleQuestions.length - 1}
-            onSubmit={submitForm}
+            onSubmit={() => { submitForm(); playKaching(); }}
           />
         </AnimatePresence>
       </div>
