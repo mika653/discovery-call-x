@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useFormStore } from "@/store/formStore";
 import WelcomeScreen from "@/components/WelcomeScreen";
@@ -10,8 +10,6 @@ import ResultsPage from "@/components/ResultsPage";
 import IntroAnimation from "@/components/IntroAnimation";
 
 export default function Home() {
-  const [showIntro, setShowIntro] = useState(true);
-
   const {
     currentStep,
     answers,
@@ -25,6 +23,15 @@ export default function Home() {
     submitForm,
     resetForm,
   } = useFormStore();
+
+  const [showIntro, setShowIntro] = useState(true);
+
+  // Skip intro if user already started the form (persisted state)
+  useEffect(() => {
+    if (currentStep !== -1 || isComplete) {
+      setShowIntro(false);
+    }
+  }, [currentStep, isComplete]);
 
   const handleIntroComplete = useCallback(() => {
     setShowIntro(false);

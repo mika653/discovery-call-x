@@ -19,9 +19,9 @@ export default function IntroAnimation({
   const [phase, setPhase] = useState<"logo" | "reveal" | "done">("logo");
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase("reveal"), 1200);
-    const t2 = setTimeout(() => setPhase("done"), 2000);
-    const t3 = setTimeout(onComplete, 2400);
+    const t1 = setTimeout(() => setPhase("reveal"), 600);
+    const t2 = setTimeout(() => setPhase("done"), 1000);
+    const t3 = setTimeout(onComplete, 1200);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -41,7 +41,7 @@ export default function IntroAnimation({
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1.5, opacity: 0.15 }}
-            transition={{ duration: 1.5, ease: "easeOut" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
             className="absolute w-[600px] h-[600px] rounded-full blur-3xl"
             style={{ background: brandColor }}
           />
@@ -123,8 +123,8 @@ export default function IntroAnimation({
                   y: Math.sin((i * Math.PI * 2) / 6) * 120,
                 }}
                 transition={{
-                  duration: 1.8,
-                  delay: 0.3 + i * 0.08,
+                  duration: 0.9,
+                  delay: 0.15 + i * 0.04,
                   ease: "easeOut",
                 }}
                 className="absolute w-1.5 h-1.5 rounded-full"
