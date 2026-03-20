@@ -3,6 +3,12 @@ import { persist } from "zustand/middleware";
 import { FormAnswers, Submission, SubmissionSummary, LeadStatus } from "@/types";
 import { questions } from "@/lib/questions";
 import { generateSummary } from "@/lib/recommendations";
+import {
+  addSubmission as firestoreAdd,
+  getSubmissions as firestoreGet,
+  updateSubmissionStatus as firestoreUpdateStatus,
+  deleteSubmissionDoc as firestoreDelete,
+} from "@/lib/firestore";
 import { v4 as uuidv4 } from "uuid";
 
 interface FormState {
@@ -12,14 +18,16 @@ interface FormState {
   isComplete: boolean;
   submissions: Submission[];
   currentSubmission: Submission | null;
+  isLoadingSubmissions: boolean;
 
   setAnswer: (questionId: string, value: string | string[] | File[] | null) => void;
   nextStep: () => void;
   prevStep: () => void;
   goToStep: (step: number) => void;
   getVisibleQuestions: () => typeof questions;
-  submitForm: () => Submission;
+  submitForm: () => void;
   resetForm: () => void;
+  loadSubmissions: () => Promise<void>;
   updateLeadStatus: (id: string, status: LeadStatus) => void;
   deleteSubmission: (id: string) => void;
 }
@@ -42,12 +50,13 @@ function filterVisibleQuestions(answers: FormAnswers) {
 export const useFormStore = create<FormState>()(
   persist(
     (set, get) => ({
-      currentStep: -1, // -1 = welcome screen
+      currentStep: -1,
       answers: {},
       visibleQuestions: filterVisibleQuestions({}),
       isComplete: false,
       submissions: [],
       currentSubmission: null,
+      isLoadingSubmissions: false,
 
       setAnswer: (questionId, value) => {
         set((state) => {
@@ -81,7 +90,7 @@ export const useFormStore = create<FormState>()(
       getVisibleQuestions: () => filterVisibleQuestions(get().answers),
 
       submitForm: () => {
-        const { answers, submissions } = get();
+        const { answers } = get();
         const summary: SubmissionSummary = generateSummary(answers);
         const submission: Submission = {
           id: uuidv4(),
@@ -93,11 +102,13 @@ export const useFormStore = create<FormState>()(
             (answers.business_name as string) || "Unnamed Business",
         };
         set({
-          submissions: [...submissions, submission],
           currentSubmission: submission,
           isComplete: true,
         });
-        return submission;
+        // Write to Firestore in the background
+        firestoreAdd(submission).catch((err) =>
+          console.error("Failed to save submission:", err)
+        );
       },
 
       resetForm: () =>
@@ -109,17 +120,40 @@ export const useFormStore = create<FormState>()(
           currentSubmission: null,
         }),
 
-      updateLeadStatus: (id, status) =>
+      loadSubmissions: async () => {
+        set({ isLoadingSubmissions: true });
+        try {
+          const submissions = await firestoreGet();
+          set({ submissions, isLoadingSubmissions: false });
+        } catch (err) {
+          console.error("Failed to load submissions:", err);
+          set({ isLoadingSubmissions: false });
+        }
+      },
+
+      updateLeadStatus: (id, status) => {
+        // Optimistic local update
         set((state) => ({
           submissions: state.submissions.map((s) =>
             s.id === id ? { ...s, status } : s
           ),
-        })),
+        }));
+        // Sync to Firestore
+        firestoreUpdateStatus(id, status).catch((err) =>
+          console.error("Failed to update status:", err)
+        );
+      },
 
-      deleteSubmission: (id) =>
+      deleteSubmission: (id) => {
+        // Optimistic local update
         set((state) => ({
           submissions: state.submissions.filter((s) => s.id !== id),
-        })),
+        }));
+        // Sync to Firestore
+        firestoreDelete(id).catch((err) =>
+          console.error("Failed to delete submission:", err)
+        );
+      },
     }),
     {
       name: "discovery-call-x-storage",
@@ -129,7 +163,6 @@ export const useFormStore = create<FormState>()(
             ([, v]) => !(Array.isArray(v) && v[0] instanceof File)
           )
         ),
-        submissions: state.submissions,
         currentStep: state.currentStep,
         isComplete: state.isComplete,
       }),
