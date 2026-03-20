@@ -52,17 +52,31 @@ export default function ProposalPage({
 }: ProposalPageProps) {
   const [copied, setCopied] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
+  const [editedPrices, setEditedPrices] = useState<Record<string, string>>(
+    () => Object.fromEntries(proposal.investment.map((t) => [t.tier, t.price]))
+  );
   const proposalRef = useRef<HTMLDivElement>(null);
 
+  const getTextWithEditedPrices = () => {
+    let text = plainText;
+    for (const tier of proposal.investment) {
+      if (editedPrices[tier.tier] !== tier.price) {
+        text = text.replace(tier.price, editedPrices[tier.tier]);
+      }
+    }
+    return text;
+  };
+
   const copyToClipboard = async () => {
+    const textToCopy = getTextWithEditedPrices();
     try {
-      await navigator.clipboard.writeText(plainText);
+      await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Fallback
       const textarea = document.createElement("textarea");
-      textarea.value = plainText;
+      textarea.value = textToCopy;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand("copy");
@@ -413,9 +427,18 @@ export default function ProposalPage({
                 <h4 className="font-bold text-foreground text-base">
                   {tier.tier}
                 </h4>
-                <p className="text-2xl font-bold text-accent mt-1">
-                  {tier.price}
-                </p>
+                <input
+                  type="text"
+                  value={editedPrices[tier.tier] || tier.price}
+                  onChange={(e) =>
+                    setEditedPrices((prev) => ({
+                      ...prev,
+                      [tier.tier]: e.target.value,
+                    }))
+                  }
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-2xl font-bold text-accent mt-1 bg-transparent border-b-2 border-dashed border-accent/20 focus:border-accent outline-none w-full transition-colors"
+                />
                 <div className="mt-4 space-y-2">
                   {tier.includes.map((item, i) => (
                     <div

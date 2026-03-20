@@ -6,6 +6,7 @@ import { useFormStore } from "@/store/formStore";
 import { Submission, LeadStatus } from "@/types";
 import { questions } from "@/lib/questions";
 import { generateProposal, proposalToText } from "@/lib/proposal";
+import { playKaching } from "@/lib/sounds";
 import ProposalPage from "@/components/ProposalPage";
 
 const statusColors: Record<LeadStatus, string> = {
@@ -187,6 +188,7 @@ export default function AdminDashboard() {
                         onClick={(e) => {
                           e.stopPropagation();
                           setProposalSubmission(submission);
+                          playKaching();
                         }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/5 text-accent text-xs font-medium hover:bg-accent/10 transition-colors"
                       >
@@ -336,6 +338,7 @@ export default function AdminDashboard() {
                     onClick={() => {
                       setSelectedSubmission(null);
                       setProposalSubmission(selectedSubmission);
+                      playKaching();
                     }}
                     className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-accent text-white font-medium text-sm hover:bg-accent-light transition-colors shadow-lg shadow-accent/20"
                   >
