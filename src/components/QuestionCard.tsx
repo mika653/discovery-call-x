@@ -1,8 +1,14 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Question, FormAnswers } from "@/types";
+import { motion } from "framer-motion";
+import { Question } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, ChevronRight, Plus, X, Upload, FileText } from "lucide-react";
 
 interface QuestionCardProps {
   question: Question;
@@ -88,26 +94,26 @@ export default function QuestionCard({
       case "phone":
       case "url":
         return (
-          <input
+          <Input
             type={question.type === "phone" ? "tel" : question.type}
             value={(answer as string) || ""}
             onChange={(e) => onAnswer(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={question.placeholder}
-            className="w-full bg-transparent border-b-2 border-border focus:border-accent text-xl sm:text-2xl py-3 outline-none transition-colors placeholder:text-muted/30"
+            className="h-auto text-xl sm:text-2xl py-3 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:border-primary placeholder:text-muted-foreground/30"
             autoFocus
           />
         );
 
       case "textarea":
         return (
-          <textarea
+          <Textarea
             value={(answer as string) || ""}
             onChange={(e) => onAnswer(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={question.placeholder}
             rows={4}
-            className="w-full bg-surface border border-border rounded-xl text-lg p-4 outline-none focus:border-accent transition-colors placeholder:text-muted/30 resize-none"
+            className="text-lg p-4 resize-none focus-visible:ring-1 focus-visible:ring-primary placeholder:text-muted-foreground/30"
             autoFocus
           />
         );
@@ -128,15 +134,15 @@ export default function QuestionCard({
                 }}
                 className={`text-left px-5 py-4 rounded-xl border-2 transition-all duration-200 text-base sm:text-lg ${
                   answer === opt.value
-                    ? "border-accent bg-accent/5 text-foreground font-medium"
-                    : "border-border hover:border-accent/30 text-foreground/80"
+                    ? "border-primary bg-primary/5 text-foreground font-medium"
+                    : "border-border hover:border-primary/30 text-foreground/80"
                 }`}
               >
                 <span className="flex items-center gap-3">
                   <span
                     className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                       answer === opt.value
-                        ? "border-accent bg-accent"
+                        ? "border-primary bg-primary"
                         : "border-border"
                     }`}
                   >
@@ -173,8 +179,8 @@ export default function QuestionCard({
                   onClick={() => handleMultiSelect(opt.value)}
                   className={`px-5 py-3 rounded-xl border-2 transition-all duration-200 text-sm sm:text-base ${
                     selected
-                      ? "border-accent bg-accent text-white font-medium"
-                      : "border-border hover:border-accent/30 text-foreground/80"
+                      ? "border-primary bg-primary text-primary-foreground font-medium"
+                      : "border-border hover:border-primary/30 text-foreground/80"
                   }`}
                 >
                   {opt.label}
@@ -187,18 +193,18 @@ export default function QuestionCard({
       case "file":
         return (
           <div className="space-y-3">
-            <div
+            <Card
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-accent/30 transition-colors"
+              className="border-2 border-dashed p-8 text-center cursor-pointer hover:border-primary/30 transition-colors"
             >
-              <div className="text-muted/40 text-4xl mb-2">+</div>
-              <p className="text-muted text-sm">
+              <Upload className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />
+              <p className="text-muted-foreground text-sm">
                 Click to upload or drag files here
               </p>
-              <p className="text-muted/50 text-xs mt-1">
+              <p className="text-muted-foreground/50 text-xs mt-1">
                 PNG, JPG, PDF up to 10MB
               </p>
-            </div>
+            </Card>
             <input
               ref={fileInputRef}
               type="file"
@@ -212,15 +218,9 @@ export default function QuestionCard({
                 {(answer as File[]).map((file, i) => (
                   <div
                     key={i}
-                    className="flex items-center gap-2 text-sm text-muted bg-surface rounded-lg px-3 py-2"
+                    className="flex items-center gap-2 text-sm text-muted-foreground bg-muted rounded-lg px-3 py-2"
                   >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path
-                        d="M4 1h5l4 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1z"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                      />
-                    </svg>
+                    <FileText className="h-4 w-4" />
                     {file.name}
                   </div>
                 ))}
@@ -234,38 +234,35 @@ export default function QuestionCard({
           <div className="space-y-3">
             {linkInputs.map((link, i) => (
               <div key={i} className="flex items-center gap-2">
-                <input
+                <Input
                   type="url"
                   value={link}
                   onChange={(e) => handleLinkChange(i, e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={question.placeholder}
-                  className="flex-1 bg-transparent border-b-2 border-border focus:border-accent text-lg py-2 outline-none transition-colors placeholder:text-muted/30"
+                  className="h-auto text-lg py-2 border-0 border-b-2 rounded-none bg-transparent focus-visible:ring-0 focus-visible:border-primary placeholder:text-muted-foreground/30"
                   autoFocus={i === 0}
                 />
                 {linkInputs.length > 1 && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => removeLink(i)}
-                    className="text-muted/40 hover:text-error transition-colors p-1"
+                    className="text-muted-foreground/40 hover:text-destructive"
                   >
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                      <path
-                        d="M5 5l8 8M13 5l-8 8"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </button>
+                    <X className="h-4 w-4" />
+                  </Button>
                 )}
               </div>
             ))}
-            <button
+            <Button
+              variant="link"
               onClick={addLink}
-              className="text-sm text-accent hover:text-accent-light transition-colors font-medium"
+              className="text-primary p-0 h-auto"
             >
-              + Add another link
-            </button>
+              <Plus className="h-4 w-4 mr-1" />
+              Add another link
+            </Button>
           </div>
         );
 
@@ -288,7 +285,7 @@ export default function QuestionCard({
           {question.question}
         </h2>
         {question.subtitle && (
-          <p className="text-base text-muted leading-relaxed">
+          <p className="text-base text-muted-foreground leading-relaxed">
             {question.subtitle}
           </p>
         )}
@@ -297,53 +294,38 @@ export default function QuestionCard({
       <div className="mb-10">{renderInput()}</div>
 
       <div className="flex items-center justify-between">
-        <button
+        <Button
+          variant="ghost"
           onClick={onPrev}
-          className="text-sm text-muted hover:text-foreground transition-colors font-medium flex items-center gap-1"
+          className="text-muted-foreground hover:text-foreground"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path
-              d="M10 4L6 8l4 4"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <ChevronLeft className="h-4 w-4 mr-1" />
           Back
-        </button>
+        </Button>
 
         <div className="flex items-center gap-3">
           {!question.required && !isAnswered() && (
-            <button
+            <Button
+              variant="ghost"
               onClick={isLast ? onSubmit : onNext}
-              className="text-sm text-muted hover:text-foreground transition-colors font-medium"
+              className="text-muted-foreground hover:text-foreground"
             >
               Skip
-            </button>
+            </Button>
           )}
-          <motion.button
-            onClick={isLast ? onSubmit : onNext}
-            disabled={!canProceed}
+          <motion.div
             whileHover={canProceed ? { scale: 1.02 } : {}}
             whileTap={canProceed ? { scale: 0.98 } : {}}
-            className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
-              canProceed
-                ? "bg-accent hover:bg-accent-light text-white shadow-md shadow-accent/10"
-                : "bg-border text-muted/40 cursor-not-allowed"
-            }`}
           >
-            {isLast ? "Submit" : "Continue"}
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M6 4l4 4-4 4"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </motion.button>
+            <Button
+              onClick={isLast ? onSubmit : onNext}
+              disabled={!canProceed}
+              className="shadow-md shadow-primary/10"
+            >
+              {isLast ? "Submit" : "Continue"}
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </motion.div>
         </div>
       </div>
     </motion.div>

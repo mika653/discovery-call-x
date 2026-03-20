@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { sections } from "@/lib/questions";
 import { Question } from "@/types";
+import { Progress } from "@/components/ui/progress";
 
 interface ProgressBarProps {
   currentStep: number;
@@ -23,21 +24,14 @@ export default function ProgressBar({
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-2 px-1">
-        <span className="text-xs font-medium text-muted">
+        <span className="text-xs font-medium text-muted-foreground">
           {currentSection?.icon} {currentSection?.label}
         </span>
-        <span className="text-xs text-muted/60">
+        <span className="text-xs text-muted-foreground/60">
           {currentStep + 1} of {totalSteps}
         </span>
       </div>
-      <div className="w-full h-1 bg-border rounded-full overflow-hidden">
-        <motion.div
-          className="h-full bg-accent rounded-full"
-          initial={{ width: 0 }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-        />
-      </div>
+      <Progress value={progress} className="h-1" />
     </div>
   );
 }
