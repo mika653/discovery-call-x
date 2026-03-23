@@ -10,6 +10,9 @@ import ResultsPage from "@/components/ResultsPage";
 import IntroAnimation from "@/components/IntroAnimation";
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
+
   const {
     currentStep,
     answers,
@@ -24,14 +27,15 @@ export default function Home() {
     resetForm,
   } = useFormStore();
 
-  const [showIntro, setShowIntro] = useState(true);
-
-  // Skip intro if user already started the form (persisted state)
+  // Only run client-side after hydration
   useEffect(() => {
-    if (currentStep !== -1 || isComplete) {
-      setShowIntro(false);
+    setMounted(true);
+    // Show intro only for fresh visitors (not returning users with persisted state)
+    const stored = localStorage.getItem("discovery-call-x-storage");
+    if (!stored) {
+      setShowIntro(true);
     }
-  }, [currentStep, isComplete]);
+  }, []);
 
   const handleIntroComplete = useCallback(() => {
     setShowIntro(false);
@@ -39,9 +43,18 @@ export default function Home() {
 
   const visibleQuestions = getVisibleQuestions();
 
+  // Don't render anything until hydrated to avoid black screen flash
+  if (!mounted) {
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background">
+        <div className="w-10 h-10 rounded-2xl bg-primary/20 animate-pulse" />
+      </div>
+    );
+  }
+
   return (
     <>
-      {/* Premium intro animation */}
+      {/* Premium intro animation — only rendered client-side */}
       {showIntro && (
         <IntroAnimation
           brandName="DiscoveryCall X"
