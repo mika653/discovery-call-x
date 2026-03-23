@@ -15,7 +15,25 @@ import {
   Printer,
   CheckCircle2,
   Circle,
+  GripVertical,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface ProposalPageProps {
   proposal: Proposal;
@@ -57,6 +75,89 @@ function Section({
   );
 }
 
+interface SortableAddOn {
+  id: string;
+  name: string;
+  price: string;
+  description: string;
+}
+
+function SortableAddOnItem({
+  addOn,
+  index,
+  onUpdate,
+  onRemove,
+}: {
+  addOn: SortableAddOn;
+  index: number;
+  onUpdate: (index: number, field: "name" | "price" | "description", value: string) => void;
+  onRemove: (index: number) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: addOn.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex flex-col sm:flex-row gap-4 p-4 bg-muted/50 rounded-xl group/addon"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="flex-shrink-0 touch-none cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors self-start pt-1"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <div className="flex-1 space-y-2">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={addOn.name}
+            onChange={(e) => onUpdate(index, "name", e.target.value)}
+            className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none font-semibold text-foreground text-[15px] w-full transition-colors hover:border-primary/20"
+          />
+          <button
+            onClick={() => onRemove(index)}
+            className="opacity-0 group-hover/addon:opacity-100 text-muted-foreground/40 hover:text-destructive transition-opacity flex-shrink-0 text-lg"
+            title="Remove add-on"
+          >
+            ×
+          </button>
+        </div>
+        <input
+          type="text"
+          value={addOn.description}
+          onChange={(e) => onUpdate(index, "description", e.target.value)}
+          className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none text-sm text-muted-foreground w-full transition-colors hover:border-primary/20"
+        />
+      </div>
+      <div className="flex-shrink-0 sm:w-32 sm:text-right">
+        <input
+          type="text"
+          value={addOn.price}
+          onChange={(e) => onUpdate(index, "price", e.target.value)}
+          className="bg-transparent border-0 border-b-2 border-dashed border-primary/20 focus:border-primary outline-none font-bold text-primary text-lg w-full sm:text-right transition-colors"
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function ProposalPage({
   proposal,
   businessName,
@@ -71,10 +172,39 @@ export default function ProposalPage({
   const [editedIncludes, setEditedIncludes] = useState<Record<string, string[]>>(
     () => Object.fromEntries(proposal.investment.map((t) => [t.tier, [...t.includes]]))
   );
-  const [editedAddOns, setEditedAddOns] = useState(
-    () => proposal.addOns.map((a) => ({ ...a }))
+  const [editedAddOns, setEditedAddOns] = useState<SortableAddOn[]>(
+    () => proposal.addOns.map((a, i) => ({ ...a, id: `addon-${i}` }))
   );
+  const [addOnCounter, setAddOnCounter] = useState(proposal.addOns.length);
   const proposalRef = useRef<HTMLDivElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleAddOnDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setEditedAddOns((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const updateAddOn = (index: number, field: "name" | "price" | "description", value: string) => {
+    setEditedAddOns((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const removeAddOn = (index: number) => {
+    setEditedAddOns((prev) => prev.filter((_, idx) => idx !== index));
+  };
 
   const getTextWithEdits = () => {
     let text = "";
@@ -129,6 +259,24 @@ export default function ProposalPage({
     proposal.nextSteps.forEach((s, i) => (text += `  ${i + 1}. ${s}\n`));
 
     return text;
+  };
+
+  const exportPdf = async () => {
+    const html2pdf = (await import("html2pdf.js")).default;
+    const el = proposalRef.current;
+    if (!el) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (html2pdf() as any)
+      .set({
+        margin: [10, 10, 10, 10],
+        filename: `Proposal - ${businessName}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+      })
+      .from(el)
+      .save();
   };
 
   const copyToClipboard = async () => {
@@ -186,7 +334,7 @@ export default function ProposalPage({
                   </>
                 )}
               </Button>
-              <Button onClick={() => window.print()}>
+              <Button onClick={exportPdf}>
                 <Printer className="h-4 w-4 mr-2" />
                 Export PDF
               </Button>
@@ -459,79 +607,43 @@ export default function ProposalPage({
         {/* 8. Add-On Services */}
         <Section number={8} title="Add-On Services" delay={0.8}>
           <p className="text-sm text-muted-foreground mb-5">
-            Enhance your project with these optional services. Prices are editable.
+            Enhance your project with these optional services. Drag to reorder, click to edit.
           </p>
-          <div className="space-y-4">
-            {editedAddOns.map((addOn, i) => (
-              <div
-                key={i}
-                className="flex flex-col sm:flex-row gap-4 p-4 bg-muted/50 rounded-xl group/addon"
-              >
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={addOn.name}
-                      onChange={(e) =>
-                        setEditedAddOns((prev) => {
-                          const updated = [...prev];
-                          updated[i] = { ...updated[i], name: e.target.value };
-                          return updated;
-                        })
-                      }
-                      className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none font-semibold text-foreground text-[15px] w-full transition-colors hover:border-primary/20"
-                    />
-                    <button
-                      onClick={() =>
-                        setEditedAddOns((prev) => prev.filter((_, idx) => idx !== i))
-                      }
-                      className="opacity-0 group-hover/addon:opacity-100 text-muted-foreground/40 hover:text-destructive transition-opacity flex-shrink-0 text-lg"
-                      title="Remove add-on"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    value={addOn.description}
-                    onChange={(e) =>
-                      setEditedAddOns((prev) => {
-                        const updated = [...prev];
-                        updated[i] = { ...updated[i], description: e.target.value };
-                        return updated;
-                      })
-                    }
-                    className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none text-sm text-muted-foreground w-full transition-colors hover:border-primary/20"
-                  />
-                </div>
-                <div className="flex-shrink-0 sm:w-32 sm:text-right">
-                  <input
-                    type="text"
-                    value={addOn.price}
-                    onChange={(e) =>
-                      setEditedAddOns((prev) => {
-                        const updated = [...prev];
-                        updated[i] = { ...updated[i], price: e.target.value };
-                        return updated;
-                      })
-                    }
-                    className="bg-transparent border-0 border-b-2 border-dashed border-primary/20 focus:border-primary outline-none font-bold text-primary text-lg w-full sm:text-right transition-colors"
-                  />
-                </div>
-              </div>
-            ))}
-            <button
-              onClick={() =>
-                setEditedAddOns((prev) => [
-                  ...prev,
-                  { name: "New Service", price: "₱0", description: "Description of the add-on service." },
-                ])
-              }
-              className="text-sm text-primary/60 hover:text-primary transition-colors flex items-center gap-1"
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleAddOnDragEnd}
+          >
+            <SortableContext
+              items={editedAddOns.map((a) => a.id)}
+              strategy={verticalListSortingStrategy}
             >
-              + Add service
-            </button>
-          </div>
+              <div className="space-y-4">
+                {editedAddOns.map((addOn, i) => (
+                  <SortableAddOnItem
+                    key={addOn.id}
+                    addOn={addOn}
+                    index={i}
+                    onUpdate={updateAddOn}
+                    onRemove={removeAddOn}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+          <button
+            onClick={() => {
+              const newId = addOnCounter;
+              setAddOnCounter((c) => c + 1);
+              setEditedAddOns((prev) => [
+                ...prev,
+                { id: `addon-${newId}`, name: "New Service", price: "₱0", description: "Description of the add-on service." },
+              ]);
+            }}
+            className="text-sm text-primary/60 hover:text-primary transition-colors flex items-center gap-1 mt-4"
+          >
+            + Add service
+          </button>
         </Section>
 
         {/* 9. Next Steps */}
@@ -561,7 +673,7 @@ export default function ProposalPage({
             <Button variant="outline" onClick={copyToClipboard}>
               {copied ? "Copied!" : "Copy to Clipboard"}
             </Button>
-            <Button onClick={() => window.print()}>
+            <Button onClick={exportPdf}>
               Export as PDF
             </Button>
           </div>

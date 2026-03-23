@@ -114,7 +114,7 @@ export function generateSummary(answers: FormAnswers): SubmissionSummary {
   if (hasPhotos === "professional" || hasPhotos === "phone") {
     available.push("Photos/videos");
   } else {
-    missing.push("Professional photography");
+    missing.push("Photos/visual assets");
   }
   const hasLogo = answers["logo_upload"];
   if (hasLogo && Array.isArray(hasLogo) && hasLogo.length > 0) {
@@ -172,10 +172,7 @@ export function generateSummary(answers: FormAnswers): SubmissionSummary {
   if (missing.includes("Logo design")) {
     priorityNextSteps.push("Design or finalize logo");
   }
-  if (missing.includes("Professional photography")) {
-    priorityNextSteps.push("Arrange professional photography");
-  }
-  priorityNextSteps.push("Define sitemap and page structure");
+priorityNextSteps.push("Define sitemap and page structure");
   priorityNextSteps.push("Begin wireframing and design mockups");
   if (suggestedFeatures.length > 0) {
     priorityNextSteps.push(

@@ -128,14 +128,12 @@ export const useFormStore = create<FormState>()(
         })
           .then((res) => res.json())
           .then((result) => {
-            if (result.success) {
-              alert("[debug] Saved to Firestore!");
-            } else {
-              alert("[debug] API error: " + result.error);
+            if (!result.success) {
+              console.error("API error:", result.error);
             }
           })
           .catch((err) => {
-            alert("[debug] Fetch failed: " + String(err));
+            console.error("Fetch failed:", err);
           });
       },
 

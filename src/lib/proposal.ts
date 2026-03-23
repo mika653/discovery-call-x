@@ -234,7 +234,7 @@ export function generateProposal(answers: FormAnswers): Proposal {
     });
   } else {
     contentRequirements.push({
-      item: "Professional Photography",
+      item: "Photos & Visual Assets",
       status: "missing",
     });
   }
@@ -378,13 +378,7 @@ export function generateProposal(answers: FormAnswers): Proposal {
       description:
         "SEO-optimized copy for all pages — headlines, about section, service descriptions, and CTAs.",
     },
-    {
-      name: "Professional Photography",
-      price: "₱12,000",
-      description:
-        "On-location photo shoot with edited, web-optimized images for your site.",
-    },
-    {
+{
       name: "Monthly Maintenance & Updates",
       price: "₱5,000/mo",
       description:
