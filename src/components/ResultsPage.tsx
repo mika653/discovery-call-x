@@ -63,26 +63,6 @@ export default function ResultsPage({ submission, onReset }: ResultsPageProps) {
           Submit another response
         </Button>
 
-        <p className="text-[11px] text-muted-foreground/30 mt-12">
-          Powered by{" "}
-          <a
-            href="https://dcx.heymika.me"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-muted-foreground/50 transition-colors"
-          >
-            DiscoveryCall X
-          </a>
-          {" · "}
-          <a
-            href="https://heymika.me"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-muted-foreground/50 transition-colors"
-          >
-            Want your own branded intake form?
-          </a>
-        </p>
       </motion.div>
     </div>
   );
