@@ -3,14 +3,12 @@ import { persist } from "zustand/middleware";
 import { FormAnswers, Submission, SubmissionSummary, LeadStatus } from "@/types";
 import { questions } from "@/lib/questions";
 import { generateSummary } from "@/lib/recommendations";
-const firestoreAdd = (submission: Submission) =>
-  import("@/lib/firestore").then((m) => m.addSubmission(submission));
-const firestoreGet = () =>
-  import("@/lib/firestore").then((m) => m.getSubmissions());
-const firestoreUpdateStatus = (id: string, status: LeadStatus) =>
-  import("@/lib/firestore").then((m) => m.updateSubmissionStatus(id, status));
-const firestoreDelete = (id: string) =>
-  import("@/lib/firestore").then((m) => m.deleteSubmissionDoc(id));
+import {
+  addSubmission as firestoreAdd,
+  getSubmissions as firestoreGet,
+  updateSubmissionStatus as firestoreUpdateStatus,
+  deleteSubmissionDoc as firestoreDelete,
+} from "@/lib/firestore";
 import { v4 as uuidv4 } from "uuid";
 
 interface FormState {
