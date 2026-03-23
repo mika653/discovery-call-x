@@ -15,25 +15,8 @@ import {
   Printer,
   CheckCircle2,
   Circle,
-  GripVertical,
+  Plus,
 } from "lucide-react";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 
 interface ProposalPageProps {
   proposal: Proposal;
@@ -75,87 +58,22 @@ function Section({
   );
 }
 
-interface SortableAddOn {
+interface EditableAddOn {
   id: string;
   name: string;
   price: string;
   description: string;
 }
 
-function SortableAddOnItem({
-  addOn,
-  index,
-  onUpdate,
-  onRemove,
-}: {
-  addOn: SortableAddOn;
-  index: number;
-  onUpdate: (index: number, field: "name" | "price" | "description", value: string) => void;
-  onRemove: (index: number) => void;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: addOn.id });
+// Parse price string like "₱15,000" or "₱5,000/mo" to a number
+function parsePrice(price: string): number {
+  const cleaned = price.replace(/[^0-9.]/g, "");
+  return parseFloat(cleaned) || 0;
+}
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 10 : undefined,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex flex-col sm:flex-row gap-4 p-4 bg-muted/50 rounded-xl group/addon"
-    >
-      <button
-        {...attributes}
-        {...listeners}
-        className="flex-shrink-0 touch-none cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-muted-foreground transition-colors self-start pt-1"
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="h-5 w-5" />
-      </button>
-      <div className="flex-1 space-y-2">
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={addOn.name}
-            onChange={(e) => onUpdate(index, "name", e.target.value)}
-            className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none font-semibold text-foreground text-[15px] w-full transition-colors hover:border-primary/20"
-          />
-          <button
-            onClick={() => onRemove(index)}
-            className="opacity-0 group-hover/addon:opacity-100 text-muted-foreground/40 hover:text-destructive transition-opacity flex-shrink-0 text-lg"
-            title="Remove add-on"
-          >
-            ×
-          </button>
-        </div>
-        <input
-          type="text"
-          value={addOn.description}
-          onChange={(e) => onUpdate(index, "description", e.target.value)}
-          className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none text-sm text-muted-foreground w-full transition-colors hover:border-primary/20"
-        />
-      </div>
-      <div className="flex-shrink-0 sm:w-32 sm:text-right">
-        <input
-          type="text"
-          value={addOn.price}
-          onChange={(e) => onUpdate(index, "price", e.target.value)}
-          className="bg-transparent border-0 border-b-2 border-dashed border-primary/20 focus:border-primary outline-none font-bold text-primary text-lg w-full sm:text-right transition-colors"
-        />
-      </div>
-    </div>
-  );
+// Format number back to peso string
+function formatPrice(amount: number): string {
+  return `₱${amount.toLocaleString()}`;
 }
 
 export default function ProposalPage({
@@ -172,26 +90,44 @@ export default function ProposalPage({
   const [editedIncludes, setEditedIncludes] = useState<Record<string, string[]>>(
     () => Object.fromEntries(proposal.investment.map((t) => [t.tier, [...t.includes]]))
   );
-  const [editedAddOns, setEditedAddOns] = useState<SortableAddOn[]>(
+  const [editedAddOns, setEditedAddOns] = useState<EditableAddOn[]>(
     () => proposal.addOns.map((a, i) => ({ ...a, id: `addon-${i}` }))
   );
   const [addOnCounter, setAddOnCounter] = useState(proposal.addOns.length);
+  // Track which add-ons are assigned to which tiers: { "addon-0": ["Basic", "Standard"], ... }
+  const [tierAddOns, setTierAddOns] = useState<Record<string, string[]>>({});
   const proposalRef = useRef<HTMLDivElement>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  const tierNames = proposal.investment.map((t) => t.tier);
+  const tierAbbrev: Record<string, string> = {};
+  tierNames.forEach((name) => {
+    tierAbbrev[name] = name.charAt(0).toUpperCase();
+  });
 
-  const handleAddOnDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setEditedAddOns((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
-    }
+  const toggleAddOnTier = (addOnId: string, tierName: string) => {
+    setTierAddOns((prev) => {
+      const current = prev[addOnId] || [];
+      if (current.includes(tierName)) {
+        return { ...prev, [addOnId]: current.filter((t) => t !== tierName) };
+      }
+      return { ...prev, [addOnId]: [...current, tierName] };
+    });
+  };
+
+  const getAddOnsForTier = (tierName: string) => {
+    return editedAddOns.filter((addOn) => {
+      const assigned = tierAddOns[addOn.id] || [];
+      return assigned.includes(tierName);
+    });
+  };
+
+  const getTierTotal = (tierName: string) => {
+    const basePrice = parsePrice(editedPrices[tierName] || "0");
+    const addOnsTotal = getAddOnsForTier(tierName).reduce(
+      (sum, addOn) => sum + parsePrice(addOn.price),
+      0
+    );
+    return basePrice + addOnsTotal;
   };
 
   const updateAddOn = (index: number, field: "name" | "price" | "description", value: string) => {
@@ -203,7 +139,13 @@ export default function ProposalPage({
   };
 
   const removeAddOn = (index: number) => {
+    const addOnId = editedAddOns[index].id;
     setEditedAddOns((prev) => prev.filter((_, idx) => idx !== index));
+    setTierAddOns((prev) => {
+      const updated = { ...prev };
+      delete updated[addOnId];
+      return updated;
+    });
   };
 
   const getTextWithEdits = () => {
@@ -245,14 +187,23 @@ export default function ProposalPage({
     proposal.investment.forEach((tier) => {
       const price = editedPrices[tier.tier] || tier.price;
       const includes = editedIncludes[tier.tier] || tier.includes;
+      const addOns = getAddOnsForTier(tier.tier);
+      const total = getTierTotal(tier.tier);
       text += `  ${tier.tier} — ${price}\n`;
       includes.forEach((inc) => (text += `    • ${inc}\n`));
+      if (addOns.length > 0) {
+        text += `    Add-ons:\n`;
+        addOns.forEach((a) => (text += `    + ${a.name} (${a.price})\n`));
+        text += `    Total: ${formatPrice(total)}\n`;
+      }
       text += "\n";
     });
 
     text += "8. ADD-ON SERVICES\n" + "-".repeat(30) + "\n";
     editedAddOns.forEach((a) => {
-      text += `  ${a.name} — ${a.price}\n    ${a.description}\n\n`;
+      const assigned = tierAddOns[a.id] || [];
+      const tierLabel = assigned.length > 0 ? ` [${assigned.join(", ")}]` : "";
+      text += `  ${a.name} — ${a.price}${tierLabel}\n    ${a.description}\n\n`;
     });
 
     text += "9. NEXT STEPS\n" + "-".repeat(30) + "\n";
@@ -513,137 +464,217 @@ export default function ProposalPage({
             customized.
           </p>
           <div className="grid gap-4 sm:grid-cols-3">
-            {proposal.investment.map((tier) => (
-              <div
-                key={tier.tier}
-                onClick={() =>
-                  setSelectedTier(
-                    selectedTier === tier.tier ? null : tier.tier
-                  )
-                }
-                className={`relative p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
-                  selectedTier === tier.tier
-                    ? "border-primary bg-primary/5 shadow-lg shadow-primary/10"
-                    : tier.tier === "Standard"
-                      ? "border-primary/20 bg-card"
-                      : "border-border bg-card hover:border-primary/20"
-                }`}
-              >
-                {tier.tier === "Standard" && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    Recommended
-                  </Badge>
-                )}
-                <h4 className="font-bold text-foreground text-base">
-                  {tier.tier}
-                </h4>
-                <Input
-                  type="text"
-                  value={editedPrices[tier.tier] || tier.price}
-                  onChange={(e) =>
-                    setEditedPrices((prev) => ({
-                      ...prev,
-                      [tier.tier]: e.target.value,
-                    }))
+            {proposal.investment.map((tier) => {
+              const addOnsForTier = getAddOnsForTier(tier.tier);
+              const hasAddOns = addOnsForTier.length > 0;
+              const total = getTierTotal(tier.tier);
+
+              return (
+                <div
+                  key={tier.tier}
+                  onClick={() =>
+                    setSelectedTier(
+                      selectedTier === tier.tier ? null : tier.tier
+                    )
                   }
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-2xl font-bold text-primary mt-1 bg-transparent border-0 border-b-2 border-dashed border-primary/20 focus-visible:border-primary focus-visible:ring-0 rounded-none h-auto p-0"
-                />
-                <div className="mt-4 space-y-2">
-                  {(editedIncludes[tier.tier] || tier.includes).map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-2 text-xs text-muted-foreground group/item"
-                    >
-                      <Check className="h-3.5 w-3.5 flex-shrink-0 mt-1 text-primary/50" />
-                      <input
-                        type="text"
-                        value={item}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          setEditedIncludes((prev) => {
-                            const updated = [...(prev[tier.tier] || tier.includes)];
-                            updated[i] = e.target.value;
-                            return { ...prev, [tier.tier]: updated };
-                          });
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none w-full text-xs text-muted-foreground py-0 px-0 transition-colors hover:border-primary/20"
-                      />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditedIncludes((prev) => {
-                            const updated = [...(prev[tier.tier] || tier.includes)];
-                            updated.splice(i, 1);
-                            return { ...prev, [tier.tier]: updated };
-                          });
-                        }}
-                        className="opacity-0 group-hover/item:opacity-100 text-muted-foreground/40 hover:text-destructive transition-opacity flex-shrink-0"
-                        title="Remove item"
+                  className={`relative p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                    selectedTier === tier.tier
+                      ? "border-primary bg-primary/5 shadow-lg shadow-primary/10"
+                      : tier.tier === "Standard"
+                        ? "border-primary/20 bg-card"
+                        : "border-border bg-card hover:border-primary/20"
+                  }`}
+                >
+                  {tier.tier === "Standard" && (
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      Recommended
+                    </Badge>
+                  )}
+                  <h4 className="font-bold text-foreground text-base">
+                    {tier.tier}
+                  </h4>
+                  <Input
+                    type="text"
+                    value={editedPrices[tier.tier] || tier.price}
+                    onChange={(e) =>
+                      setEditedPrices((prev) => ({
+                        ...prev,
+                        [tier.tier]: e.target.value,
+                      }))
+                    }
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-2xl font-bold text-primary mt-1 bg-transparent border-0 border-b-2 border-dashed border-primary/20 focus-visible:border-primary focus-visible:ring-0 rounded-none h-auto p-0"
+                  />
+                  <div className="mt-4 space-y-2">
+                    {(editedIncludes[tier.tier] || tier.includes).map((item, i) => (
+                      <div
+                        key={i}
+                        className="flex items-start gap-2 text-xs text-muted-foreground group/item"
                       >
-                        ×
-                      </button>
+                        <Check className="h-3.5 w-3.5 flex-shrink-0 mt-1 text-primary/50" />
+                        <input
+                          type="text"
+                          value={item}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            setEditedIncludes((prev) => {
+                              const updated = [...(prev[tier.tier] || tier.includes)];
+                              updated[i] = e.target.value;
+                              return { ...prev, [tier.tier]: updated };
+                            });
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none w-full text-xs text-muted-foreground py-0 px-0 transition-colors hover:border-primary/20"
+                        />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditedIncludes((prev) => {
+                              const updated = [...(prev[tier.tier] || tier.includes)];
+                              updated.splice(i, 1);
+                              return { ...prev, [tier.tier]: updated };
+                            });
+                          }}
+                          className="opacity-0 group-hover/item:opacity-100 text-muted-foreground/40 hover:text-destructive transition-opacity flex-shrink-0"
+                          title="Remove item"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditedIncludes((prev) => {
+                          const updated = [...(prev[tier.tier] || tier.includes), ""];
+                          return { ...prev, [tier.tier]: updated };
+                        });
+                      }}
+                      className="text-xs text-primary/50 hover:text-primary transition-colors mt-1 pl-5"
+                    >
+                      + Add item
+                    </button>
+                  </div>
+
+                  {/* Add-ons assigned to this tier */}
+                  {hasAddOns && (
+                    <div className="mt-4 pt-3 border-t border-border/50">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                        Add-ons included
+                      </p>
+                      {addOnsForTier.map((addOn) => (
+                        <div
+                          key={addOn.id}
+                          className="flex items-center justify-between text-xs text-muted-foreground py-1"
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <Plus className="h-3 w-3 text-primary/50" />
+                            <span>{addOn.name}</span>
+                          </div>
+                          <span className="text-primary/70 font-medium">{addOn.price}</span>
+                        </div>
+                      ))}
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-dashed border-border/50">
+                        <span className="text-xs font-semibold text-foreground">Total</span>
+                        <span className="text-sm font-bold text-primary">
+                          {formatPrice(total)}
+                        </span>
+                      </div>
                     </div>
-                  ))}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditedIncludes((prev) => {
-                        const updated = [...(prev[tier.tier] || tier.includes), ""];
-                        return { ...prev, [tier.tier]: updated };
-                      });
-                    }}
-                    className="text-xs text-primary/50 hover:text-primary transition-colors mt-1 pl-5"
-                  >
-                    + Add item
-                  </button>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Section>
 
         {/* 8. Add-On Services */}
         <Section number={8} title="Add-On Services" delay={0.8}>
           <p className="text-sm text-muted-foreground mb-5">
-            Enhance your project with these optional services. Drag to reorder, click to edit.
+            Enhance your project with these optional services. Tap a package letter to include it in that tier.
           </p>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleAddOnDragEnd}
-          >
-            <SortableContext
-              items={editedAddOns.map((a) => a.id)}
-              strategy={verticalListSortingStrategy}
+          <div className="space-y-4">
+            {editedAddOns.map((addOn, i) => {
+              const assignedTiers = tierAddOns[addOn.id] || [];
+              return (
+                <div
+                  key={addOn.id}
+                  className="p-4 bg-muted/50 rounded-xl group/addon"
+                >
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={addOn.name}
+                          onChange={(e) => updateAddOn(i, "name", e.target.value)}
+                          className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none font-semibold text-foreground text-[15px] w-full transition-colors hover:border-primary/20"
+                        />
+                        <button
+                          onClick={() => removeAddOn(i)}
+                          className="opacity-0 group-hover/addon:opacity-100 text-muted-foreground/40 hover:text-destructive transition-opacity flex-shrink-0 text-lg"
+                          title="Remove add-on"
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={addOn.description}
+                        onChange={(e) => updateAddOn(i, "description", e.target.value)}
+                        className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none text-sm text-muted-foreground w-full transition-colors hover:border-primary/20"
+                      />
+                    </div>
+                    <div className="flex-shrink-0 sm:w-32 sm:text-right">
+                      <input
+                        type="text"
+                        value={addOn.price}
+                        onChange={(e) => updateAddOn(i, "price", e.target.value)}
+                        className="bg-transparent border-0 border-b-2 border-dashed border-primary/20 focus:border-primary outline-none font-bold text-primary text-lg w-full sm:text-right transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tier assignment buttons */}
+                  <div className="flex items-center gap-2 mt-3 print:hidden">
+                    <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider mr-1">
+                      Add to:
+                    </span>
+                    {tierNames.map((tierName) => {
+                      const isAssigned = assignedTiers.includes(tierName);
+                      return (
+                        <button
+                          key={tierName}
+                          onClick={() => toggleAddOnTier(addOn.id, tierName)}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150 ${
+                            isAssigned
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "bg-muted-foreground/10 text-muted-foreground hover:bg-muted-foreground/20"
+                          }`}
+                          title={isAssigned ? `Remove from ${tierName}` : `Add to ${tierName}`}
+                        >
+                          {tierName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+            <button
+              onClick={() => {
+                const newId = addOnCounter;
+                setAddOnCounter((c) => c + 1);
+                setEditedAddOns((prev) => [
+                  ...prev,
+                  { id: `addon-${newId}`, name: "New Service", price: "₱0", description: "Description of the add-on service." },
+                ]);
+              }}
+              className="text-sm text-primary/60 hover:text-primary transition-colors flex items-center gap-1"
             >
-              <div className="space-y-4">
-                {editedAddOns.map((addOn, i) => (
-                  <SortableAddOnItem
-                    key={addOn.id}
-                    addOn={addOn}
-                    index={i}
-                    onUpdate={updateAddOn}
-                    onRemove={removeAddOn}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-          <button
-            onClick={() => {
-              const newId = addOnCounter;
-              setAddOnCounter((c) => c + 1);
-              setEditedAddOns((prev) => [
-                ...prev,
-                { id: `addon-${newId}`, name: "New Service", price: "₱0", description: "Description of the add-on service." },
-              ]);
-            }}
-            className="text-sm text-primary/60 hover:text-primary transition-colors flex items-center gap-1 mt-4"
-          >
-            + Add service
-          </button>
+              + Add service
+            </button>
+          </div>
         </Section>
 
         {/* 9. Next Steps */}
