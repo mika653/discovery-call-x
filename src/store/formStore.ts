@@ -129,6 +129,7 @@ export const useFormStore = create<FormState>()(
         set({ isLoadingSubmissions: true });
         try {
           const submissions = await firestoreGet();
+          console.log("Loaded submissions from Firestore:", submissions.length, submissions);
           set({ submissions, isLoadingSubmissions: false });
         } catch (err) {
           console.error("Failed to load submissions:", err);
