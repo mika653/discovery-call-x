@@ -130,13 +130,13 @@ export const useFormStore = create<FormState>()(
         })
           .then((result) => {
             if (result.success) {
-              console.log("Submission saved via server action:", submission.id);
+              alert("[debug] Saved to Firestore!");
             } else {
-              console.error("Server action error:", result.error);
+              alert("[debug] Server action error: " + result.error);
             }
           })
           .catch((err) => {
-            console.error("Failed to call server action:", err);
+            alert("[debug] Failed to call server action: " + String(err));
           });
       },
 
