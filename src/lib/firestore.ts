@@ -26,14 +26,14 @@ export async function addSubmission(submission: Submission): Promise<void> {
 }
 
 export async function getSubmissions(): Promise<Submission[]> {
-  const { collection, query, orderBy, getDocs } = await import("firebase/firestore");
+  const { collection, getDocs } = await import("firebase/firestore");
   const db = await getDb();
-  const q = query(
-    collection(db, COLLECTION),
-    orderBy("createdAt", "desc")
+  const snapshot = await getDocs(collection(db, COLLECTION));
+  const submissions = snapshot.docs.map((d) => d.data() as Submission);
+  // Sort client-side to avoid needing a Firestore index
+  return submissions.sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => d.data() as Submission);
 }
 
 export async function updateSubmissionStatus(
