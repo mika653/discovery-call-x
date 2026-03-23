@@ -6,7 +6,6 @@ import { useFormStore } from "@/store/formStore";
 import { Submission, LeadStatus } from "@/types";
 import { questions } from "@/lib/questions";
 import { generateProposal, proposalToText } from "@/lib/proposal";
-import { playKaching } from "@/lib/sounds";
 import ProposalPage from "@/components/ProposalPage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -218,7 +217,7 @@ export default function AdminDashboard() {
                             onClick={(e) => {
                               e.stopPropagation();
                               setProposalSubmission(submission);
-                              playKaching();
+
                             }}
                             className="text-primary"
                           >
@@ -328,7 +327,6 @@ export default function AdminDashboard() {
                 onClick={() => {
                   setSelectedSubmission(null);
                   setProposalSubmission(selectedSubmission);
-                  playKaching();
                 }}
               >
                 <FileText className="h-4 w-4 mr-2" />
