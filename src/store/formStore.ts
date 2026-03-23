@@ -3,12 +3,6 @@ import { persist } from "zustand/middleware";
 import { FormAnswers, Submission, SubmissionSummary, LeadStatus } from "@/types";
 import { questions } from "@/lib/questions";
 import { generateSummary } from "@/lib/recommendations";
-import {
-  saveSubmission,
-  fetchSubmissions,
-  updateStatus,
-  deleteSubmission as deleteSubmissionAction,
-} from "@/app/actions";
 import { v4 as uuidv4 } from "uuid";
 
 interface FormState {
@@ -119,24 +113,29 @@ export const useFormStore = create<FormState>()(
           isComplete: true,
         });
 
-        // Save via server action (runs on Vercel server, not browser)
-        saveSubmission({
-          id: submission.id,
-          answers: sanitizeAnswers(submission.answers),
-          summary: submission.summary as unknown as Record<string, unknown>,
-          status: submission.status,
-          createdAt: submission.createdAt,
-          businessName: submission.businessName,
+        // Save via API route (runs on Vercel server, not browser Firebase SDK)
+        fetch("/api/submissions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: submission.id,
+            answers: sanitizeAnswers(submission.answers),
+            summary: submission.summary,
+            status: submission.status,
+            createdAt: submission.createdAt,
+            businessName: submission.businessName,
+          }),
         })
+          .then((res) => res.json())
           .then((result) => {
             if (result.success) {
               alert("[debug] Saved to Firestore!");
             } else {
-              alert("[debug] Server action error: " + result.error);
+              alert("[debug] API error: " + result.error);
             }
           })
           .catch((err) => {
-            alert("[debug] Failed to call server action: " + String(err));
+            alert("[debug] Fetch failed: " + String(err));
           });
       },
 
@@ -152,10 +151,11 @@ export const useFormStore = create<FormState>()(
       loadSubmissions: async () => {
         set({ isLoadingSubmissions: true });
         try {
-          const result = await fetchSubmissions();
+          const res = await fetch("/api/submissions");
+          const result = await res.json();
           if (result.success && result.submissions) {
             set({
-              submissions: result.submissions as unknown as Submission[],
+              submissions: result.submissions as Submission[],
               isLoadingSubmissions: false,
             });
           } else {
@@ -174,18 +174,22 @@ export const useFormStore = create<FormState>()(
             s.id === id ? { ...s, status } : s
           ),
         }));
-        updateStatus(id, status).catch((err) =>
-          console.error("Failed to update status:", err)
-        );
+        fetch("/api/submissions", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, status }),
+        }).catch((err) => console.error("Failed to update status:", err));
       },
 
       deleteSubmission: (id) => {
         set((state) => ({
           submissions: state.submissions.filter((s) => s.id !== id),
         }));
-        deleteSubmissionAction(id).catch((err) =>
-          console.error("Failed to delete submission:", err)
-        );
+        fetch("/api/submissions", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        }).catch((err) => console.error("Failed to delete submission:", err));
       },
     }),
     {
