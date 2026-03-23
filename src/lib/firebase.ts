@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from "firebase/app";
+import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getFirestore, Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -10,11 +10,19 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db: Firestore = getFirestore(app);
+let app: FirebaseApp;
+let db: Firestore;
 
-export async function getDb(): Promise<Firestore> {
+function ensureInitialized() {
+  if (!db) {
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+    db = getFirestore(app);
+  }
   return db;
+}
+
+export function getDb(): Firestore {
+  return ensureInitialized();
 }
 
 export { db };
