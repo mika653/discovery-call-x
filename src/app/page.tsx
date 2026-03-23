@@ -35,7 +35,24 @@ export default function Home() {
     if (!stored) {
       setShowIntro(true);
     }
-  }, []);
+
+    // Fix stale persisted state: if marked complete but no submission data,
+    // or if currentStep is out of bounds, reset to welcome screen
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        const state = parsed?.state;
+        if (state?.isComplete || (state?.currentStep >= 0 && !state?.answers)) {
+          // Stale state — reset it
+          localStorage.removeItem("discovery-call-x-storage");
+          resetForm();
+        }
+      } catch {
+        localStorage.removeItem("discovery-call-x-storage");
+        resetForm();
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleIntroComplete = useCallback(() => {
     setShowIntro(false);
@@ -70,12 +87,17 @@ export default function Home() {
         </AnimatePresence>
       )}
 
-      {/* Results page */}
+      {/* Results page — or reset if submission data was lost */}
       {isComplete && currentSubmission && (
         <ResultsPage
           submission={currentSubmission}
           onReset={resetForm}
         />
+      )}
+      {isComplete && !currentSubmission && (
+        <AnimatePresence mode="wait">
+          <WelcomeScreen onStart={() => { resetForm(); goToStep(0); }} />
+        </AnimatePresence>
       )}
 
       {/* Questionnaire */}
