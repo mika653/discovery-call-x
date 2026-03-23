@@ -62,6 +62,8 @@ export default function ResultsPage({ submission, onReset }: ResultsPageProps) {
         >
           Submit another response
         </Button>
+
+        <p className="text-[10px] text-muted-foreground/30 mt-8">v7</p>
       </motion.div>
     </div>
   );

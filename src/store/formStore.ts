@@ -101,23 +101,20 @@ export const useFormStore = create<FormState>()(
           businessName:
             (answers.business_name as string) || "Unnamed Business",
         };
+        // Write to Firestore BEFORE showing results
+        alert("[v7] Saving to Firebase now...");
+        firestoreAdd(submission)
+          .then(() => {
+            alert("[v7] Saved! Check /admin");
+          })
+          .catch((err) => {
+            alert("[v7] Firebase error: " + String(err));
+          });
+
         set({
           currentSubmission: submission,
           isComplete: true,
         });
-        // Write to Firestore
-        try {
-          alert("Step 1: About to save to Firebase...");
-          firestoreAdd(submission)
-            .then(() => {
-              alert("Step 2: Saved successfully!");
-            })
-            .catch((err) => {
-              alert("Step 2 ERROR: " + String(err));
-            });
-        } catch (err) {
-          alert("SYNC ERROR: " + String(err));
-        }
       },
 
       resetForm: () =>
