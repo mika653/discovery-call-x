@@ -11,71 +11,92 @@ export function playKaching() {
   const ctx = getContext();
   const now = ctx.currentTime;
 
-  // First "ka" — short metallic hit
-  const osc1 = ctx.createOscillator();
-  const gain1 = ctx.createGain();
-  osc1.type = "square";
-  osc1.frequency.setValueAtTime(1200, now);
-  osc1.frequency.exponentialRampToValueAtTime(800, now + 0.03);
-  gain1.gain.setValueAtTime(0.3, now);
-  gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-  osc1.connect(gain1).connect(ctx.destination);
-  osc1.start(now);
-  osc1.stop(now + 0.08);
+  // --- Mechanical "clunk" of the drawer sliding open ---
+  // Low thud
+  const thud = ctx.createOscillator();
+  const thudGain = ctx.createGain();
+  thud.type = "sine";
+  thud.frequency.setValueAtTime(120, now);
+  thud.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+  thudGain.gain.setValueAtTime(0.35, now);
+  thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+  thud.connect(thudGain).connect(ctx.destination);
+  thud.start(now);
+  thud.stop(now + 0.1);
 
-  // Second "ka" — slightly lower
-  const osc2 = ctx.createOscillator();
-  const gain2 = ctx.createGain();
-  osc2.type = "square";
-  osc2.frequency.setValueAtTime(1000, now + 0.08);
-  osc2.frequency.exponentialRampToValueAtTime(600, now + 0.12);
-  gain2.gain.setValueAtTime(0.25, now + 0.08);
-  gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-  osc2.connect(gain2).connect(ctx.destination);
-  osc2.start(now + 0.08);
-  osc2.stop(now + 0.16);
-
-  // "Ching" — bright bell ring
-  const osc3 = ctx.createOscillator();
-  const gain3 = ctx.createGain();
-  osc3.type = "sine";
-  osc3.frequency.setValueAtTime(3500, now + 0.15);
-  osc3.frequency.exponentialRampToValueAtTime(2800, now + 0.6);
-  gain3.gain.setValueAtTime(0.4, now + 0.15);
-  gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
-  osc3.connect(gain3).connect(ctx.destination);
-  osc3.start(now + 0.15);
-  osc3.stop(now + 0.7);
-
-  // Shimmer overtone
-  const osc4 = ctx.createOscillator();
-  const gain4 = ctx.createGain();
-  osc4.type = "sine";
-  osc4.frequency.setValueAtTime(5200, now + 0.15);
-  osc4.frequency.exponentialRampToValueAtTime(4000, now + 0.5);
-  gain4.gain.setValueAtTime(0.15, now + 0.15);
-  gain4.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
-  osc4.connect(gain4).connect(ctx.destination);
-  osc4.start(now + 0.15);
-  osc4.stop(now + 0.55);
-
-  // Coin rattle — noise burst
-  const bufferSize = ctx.sampleRate * 0.12;
-  const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = noiseBuffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = (Math.random() * 2 - 1) * 0.3;
+  // Mechanical click/rattle noise
+  const clickLen = ctx.sampleRate * 0.06;
+  const clickBuf = ctx.createBuffer(1, clickLen, ctx.sampleRate);
+  const clickData = clickBuf.getChannelData(0);
+  for (let i = 0; i < clickLen; i++) {
+    clickData[i] = (Math.random() * 2 - 1) * 0.4;
   }
-  const noise = ctx.createBufferSource();
-  noise.buffer = noiseBuffer;
-  const noiseGain = ctx.createGain();
-  noiseGain.gain.setValueAtTime(0.12, now + 0.14);
-  noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-  const noiseFilter = ctx.createBiquadFilter();
-  noiseFilter.type = "bandpass";
-  noiseFilter.frequency.value = 4000;
-  noiseFilter.Q.value = 2;
-  noise.connect(noiseFilter).connect(noiseGain).connect(ctx.destination);
-  noise.start(now + 0.14);
-  noise.stop(now + 0.3);
+  const click = ctx.createBufferSource();
+  click.buffer = clickBuf;
+  const clickGain = ctx.createGain();
+  clickGain.gain.setValueAtTime(0.2, now);
+  clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+  const clickFilter = ctx.createBiquadFilter();
+  clickFilter.type = "highpass";
+  clickFilter.frequency.value = 800;
+  click.connect(clickFilter).connect(clickGain).connect(ctx.destination);
+  click.start(now);
+  click.stop(now + 0.06);
+
+  // --- Bell "ching!" — the classic cash register ring ---
+  // Main bell tone (warm, not shrill)
+  const bell = ctx.createOscillator();
+  const bellGain = ctx.createGain();
+  bell.type = "sine";
+  bell.frequency.setValueAtTime(2200, now + 0.1);
+  bell.frequency.exponentialRampToValueAtTime(2000, now + 0.8);
+  bellGain.gain.setValueAtTime(0.35, now + 0.1);
+  bellGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+  bell.connect(bellGain).connect(ctx.destination);
+  bell.start(now + 0.1);
+  bell.stop(now + 0.9);
+
+  // Bell overtone (gives it that metallic bell character)
+  const overtone = ctx.createOscillator();
+  const overtoneGain = ctx.createGain();
+  overtone.type = "sine";
+  overtone.frequency.setValueAtTime(3520, now + 0.1);
+  overtone.frequency.exponentialRampToValueAtTime(3200, now + 0.6);
+  overtoneGain.gain.setValueAtTime(0.12, now + 0.1);
+  overtoneGain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+  overtone.connect(overtoneGain).connect(ctx.destination);
+  overtone.start(now + 0.1);
+  overtone.stop(now + 0.65);
+
+  // Second softer bell hit (the "double ding" of a register)
+  const bell2 = ctx.createOscillator();
+  const bell2Gain = ctx.createGain();
+  bell2.type = "sine";
+  bell2.frequency.setValueAtTime(2600, now + 0.22);
+  bell2.frequency.exponentialRampToValueAtTime(2400, now + 0.7);
+  bell2Gain.gain.setValueAtTime(0.2, now + 0.22);
+  bell2Gain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+  bell2.connect(bell2Gain).connect(ctx.destination);
+  bell2.start(now + 0.22);
+  bell2.stop(now + 0.75);
+
+  // Subtle coin jingle
+  const jingleLen = ctx.sampleRate * 0.15;
+  const jingleBuf = ctx.createBuffer(1, jingleLen, ctx.sampleRate);
+  const jingleData = jingleBuf.getChannelData(0);
+  for (let i = 0; i < jingleLen; i++) {
+    jingleData[i] = (Math.random() * 2 - 1) * 0.15;
+  }
+  const jingle = ctx.createBufferSource();
+  jingle.buffer = jingleBuf;
+  const jingleGain = ctx.createGain();
+  jingleGain.gain.setValueAtTime(0.08, now + 0.12);
+  jingleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+  const jingleFilter = ctx.createBiquadFilter();
+  jingleFilter.type = "bandpass";
+  jingleFilter.frequency.value = 6000;
+  jingleFilter.Q.value = 3;
+  jingle.connect(jingleFilter).connect(jingleGain).connect(ctx.destination);
+  jingle.start(now + 0.12);
+  jingle.stop(now + 0.3);
 }
