@@ -109,7 +109,10 @@ export const useFormStore = create<FormState>()(
         });
         // Write to Firestore in the background
         firestoreAdd(submission)
-          .then(() => console.log("Submission saved to Firestore:", submission.id))
+          .then(() => {
+            console.log("Submission saved to Firestore:", submission.id);
+            alert("Success! Submission saved. Check /admin to see it.");
+          })
           .catch((err) => {
             console.error("Failed to save submission:", err);
             alert("Error saving to database: " + (err as Error).message);
@@ -130,6 +133,9 @@ export const useFormStore = create<FormState>()(
         try {
           const submissions = await firestoreGet();
           console.log("Loaded submissions from Firestore:", submissions.length, submissions);
+          if (submissions.length === 0) {
+            console.warn("Firestore returned 0 submissions. Check Firebase Console > Firestore to see if documents exist in the 'submissions' collection.");
+          }
           set({ submissions, isLoadingSubmissions: false });
         } catch (err) {
           console.error("Failed to load submissions:", err);
