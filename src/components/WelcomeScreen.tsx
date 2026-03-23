@@ -78,7 +78,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           </a>
           {" · "}
           <a
-            href="https://heymika.me"
+            href="https://discovery-call-x-demo.vercel.app"
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-2 hover:text-muted-foreground/50 transition-colors"
