@@ -2,12 +2,14 @@ import { create } from "zustand";
 import { FormAnswers, Submission, SubmissionSummary, LeadStatus, Question } from "@/types";
 import { TenantConfig } from "@/types/tenant";
 import { generateSummary } from "@/lib/recommendations";
-import {
-  addTenantSubmission,
-  getTenantSubmissions,
-  updateTenantSubmissionStatus,
-  deleteTenantSubmissionDoc,
-} from "@/lib/tenant-firestore";
+const addTenantSubmission = (slug: string, submission: Submission) =>
+  import("@/lib/tenant-firestore").then((m) => m.addTenantSubmission(slug, submission));
+const getTenantSubmissions = (slug: string) =>
+  import("@/lib/tenant-firestore").then((m) => m.getTenantSubmissions(slug));
+const updateTenantSubmissionStatus = (slug: string, id: string, status: LeadStatus) =>
+  import("@/lib/tenant-firestore").then((m) => m.updateTenantSubmissionStatus(slug, id, status));
+const deleteTenantSubmissionDoc = (slug: string, id: string) =>
+  import("@/lib/tenant-firestore").then((m) => m.deleteTenantSubmissionDoc(slug, id));
 import { demoSubmissions } from "@/lib/demo-submissions";
 import { v4 as uuidv4 } from "uuid";
 
