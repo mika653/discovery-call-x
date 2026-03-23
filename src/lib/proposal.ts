@@ -35,6 +35,7 @@ export interface Proposal {
   contentRequirements: { item: string; status: "available" | "missing" }[];
   timeline: { phase: string; duration: string; details: string }[];
   investment: { tier: string; price: string; includes: string[] }[];
+  addOns: { name: string; price: string; description: string }[];
   nextSteps: string[];
 }
 
@@ -363,7 +364,47 @@ export function generateProposal(answers: FormAnswers): Proposal {
     },
   ];
 
-  // 8. Next Steps
+  // 8. Add-On Services
+  const addOns: { name: string; price: string; description: string }[] = [
+    {
+      name: "Logo & Brand Identity Package",
+      price: "₱15,000",
+      description:
+        "Custom logo design, color palette, typography guide, and brand style sheet.",
+    },
+    {
+      name: "Professional Copywriting",
+      price: "₱10,000",
+      description:
+        "SEO-optimized copy for all pages — headlines, about section, service descriptions, and CTAs.",
+    },
+    {
+      name: "Professional Photography",
+      price: "₱12,000",
+      description:
+        "On-location photo shoot with edited, web-optimized images for your site.",
+    },
+    {
+      name: "Monthly Maintenance & Updates",
+      price: "₱5,000/mo",
+      description:
+        "Ongoing content updates, security patches, performance monitoring, and priority support.",
+    },
+    {
+      name: "Social Media Starter Kit",
+      price: "₱8,000",
+      description:
+        "Branded templates for posts, stories, and covers across Instagram, Facebook, and LinkedIn.",
+    },
+    {
+      name: "Google Ads Setup & Management",
+      price: "₱10,000",
+      description:
+        "Campaign setup, keyword research, ad copy, landing page optimization, and 30 days of management.",
+    },
+  ];
+
+  // 9. Next Steps
   const nextSteps = [
     "Review this proposal and select your preferred package",
     "Confirm the project scope and finalize requirements",
@@ -380,6 +421,7 @@ export function generateProposal(answers: FormAnswers): Proposal {
     contentRequirements,
     timeline,
     investment,
+    addOns,
     nextSteps,
   };
 }
@@ -434,7 +476,13 @@ export function proposalToText(proposal: Proposal, businessName: string): string
     text += "\n";
   });
 
-  text += "8. NEXT STEPS\n";
+  text += "8. ADD-ON SERVICES\n";
+  text += "-".repeat(30) + "\n";
+  proposal.addOns.forEach((a) => {
+    text += `  ${a.name} — ${a.price}\n    ${a.description}\n\n`;
+  });
+
+  text += "9. NEXT STEPS\n";
   text += "-".repeat(30) + "\n";
   proposal.nextSteps.forEach((s, i) => (text += `  ${i + 1}. ${s}\n`));
 

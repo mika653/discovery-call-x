@@ -68,20 +68,71 @@ export default function ProposalPage({
   const [editedPrices, setEditedPrices] = useState<Record<string, string>>(
     () => Object.fromEntries(proposal.investment.map((t) => [t.tier, t.price]))
   );
+  const [editedIncludes, setEditedIncludes] = useState<Record<string, string[]>>(
+    () => Object.fromEntries(proposal.investment.map((t) => [t.tier, [...t.includes]]))
+  );
+  const [editedAddOns, setEditedAddOns] = useState(
+    () => proposal.addOns.map((a) => ({ ...a }))
+  );
   const proposalRef = useRef<HTMLDivElement>(null);
 
-  const getTextWithEditedPrices = () => {
-    let text = plainText;
-    for (const tier of proposal.investment) {
-      if (editedPrices[tier.tier] !== tier.price) {
-        text = text.replace(tier.price, editedPrices[tier.tier]);
-      }
-    }
+  const getTextWithEdits = () => {
+    let text = "";
+    text += `PROPOSAL FOR ${businessName.toUpperCase()}\n`;
+    text += "=".repeat(50) + "\n\n";
+
+    text += "1. INTRODUCTION\n" + "-".repeat(30) + "\n";
+    text += proposal.introduction + "\n\n";
+
+    text += "2. PROJECT OVERVIEW\n" + "-".repeat(30) + "\n";
+    text += proposal.projectOverview.businessSummary + "\n\n";
+    text += "Key Goals:\n";
+    proposal.projectOverview.keyGoals.forEach((g) => (text += `  • ${g}\n`));
+    text += "\n" + proposal.projectOverview.targetOutcome + "\n\n";
+
+    text += "3. RECOMMENDED WEBSITE STRUCTURE\n" + "-".repeat(30) + "\n";
+    proposal.websiteStructure.forEach((p) => {
+      text += `  ${p.page}\n    ${p.description}\n\n`;
+    });
+
+    text += "4. FEATURES & FUNCTIONALITY\n" + "-".repeat(30) + "\n";
+    proposal.features.forEach((f) => {
+      text += `  ${f.name}\n    ${f.description}\n\n`;
+    });
+
+    text += "5. CONTENT REQUIREMENTS\n" + "-".repeat(30) + "\n";
+    proposal.contentRequirements.forEach((c) => {
+      text += `  ${c.status === "available" ? "✓" : "✗"} ${c.item}\n`;
+    });
+    text += "\n";
+
+    text += "6. TIMELINE ESTIMATE\n" + "-".repeat(30) + "\n";
+    proposal.timeline.forEach((t) => {
+      text += `  ${t.duration}: ${t.phase}\n    ${t.details}\n\n`;
+    });
+
+    text += "7. INVESTMENT\n" + "-".repeat(30) + "\n";
+    proposal.investment.forEach((tier) => {
+      const price = editedPrices[tier.tier] || tier.price;
+      const includes = editedIncludes[tier.tier] || tier.includes;
+      text += `  ${tier.tier} — ${price}\n`;
+      includes.forEach((inc) => (text += `    • ${inc}\n`));
+      text += "\n";
+    });
+
+    text += "8. ADD-ON SERVICES\n" + "-".repeat(30) + "\n";
+    editedAddOns.forEach((a) => {
+      text += `  ${a.name} — ${a.price}\n    ${a.description}\n\n`;
+    });
+
+    text += "9. NEXT STEPS\n" + "-".repeat(30) + "\n";
+    proposal.nextSteps.forEach((s, i) => (text += `  ${i + 1}. ${s}\n`));
+
     return text;
   };
 
   const copyToClipboard = async () => {
-    const textToCopy = getTextWithEditedPrices();
+    const textToCopy = getTextWithEdits();
     try {
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
@@ -351,23 +402,140 @@ export default function ProposalPage({
                   className="text-2xl font-bold text-primary mt-1 bg-transparent border-0 border-b-2 border-dashed border-primary/20 focus-visible:border-primary focus-visible:ring-0 rounded-none h-auto p-0"
                 />
                 <div className="mt-4 space-y-2">
-                  {tier.includes.map((item, i) => (
+                  {(editedIncludes[tier.tier] || tier.includes).map((item, i) => (
                     <div
                       key={i}
-                      className="flex items-start gap-2 text-xs text-muted-foreground"
+                      className="flex items-start gap-2 text-xs text-muted-foreground group/item"
                     >
-                      <Check className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-primary/50" />
-                      {item}
+                      <Check className="h-3.5 w-3.5 flex-shrink-0 mt-1 text-primary/50" />
+                      <input
+                        type="text"
+                        value={item}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setEditedIncludes((prev) => {
+                            const updated = [...(prev[tier.tier] || tier.includes)];
+                            updated[i] = e.target.value;
+                            return { ...prev, [tier.tier]: updated };
+                          });
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none w-full text-xs text-muted-foreground py-0 px-0 transition-colors hover:border-primary/20"
+                      />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditedIncludes((prev) => {
+                            const updated = [...(prev[tier.tier] || tier.includes)];
+                            updated.splice(i, 1);
+                            return { ...prev, [tier.tier]: updated };
+                          });
+                        }}
+                        className="opacity-0 group-hover/item:opacity-100 text-muted-foreground/40 hover:text-destructive transition-opacity flex-shrink-0"
+                        title="Remove item"
+                      >
+                        ×
+                      </button>
                     </div>
                   ))}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditedIncludes((prev) => {
+                        const updated = [...(prev[tier.tier] || tier.includes), ""];
+                        return { ...prev, [tier.tier]: updated };
+                      });
+                    }}
+                    className="text-xs text-primary/50 hover:text-primary transition-colors mt-1 pl-5"
+                  >
+                    + Add item
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </Section>
 
-        {/* 8. Next Steps */}
-        <Section number={8} title="Next Steps" delay={0.8}>
+        {/* 8. Add-On Services */}
+        <Section number={8} title="Add-On Services" delay={0.8}>
+          <p className="text-sm text-muted-foreground mb-5">
+            Enhance your project with these optional services. Prices are editable.
+          </p>
+          <div className="space-y-4">
+            {editedAddOns.map((addOn, i) => (
+              <div
+                key={i}
+                className="flex flex-col sm:flex-row gap-4 p-4 bg-muted/50 rounded-xl group/addon"
+              >
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={addOn.name}
+                      onChange={(e) =>
+                        setEditedAddOns((prev) => {
+                          const updated = [...prev];
+                          updated[i] = { ...updated[i], name: e.target.value };
+                          return updated;
+                        })
+                      }
+                      className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none font-semibold text-foreground text-[15px] w-full transition-colors hover:border-primary/20"
+                    />
+                    <button
+                      onClick={() =>
+                        setEditedAddOns((prev) => prev.filter((_, idx) => idx !== i))
+                      }
+                      className="opacity-0 group-hover/addon:opacity-100 text-muted-foreground/40 hover:text-destructive transition-opacity flex-shrink-0 text-lg"
+                      title="Remove add-on"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={addOn.description}
+                    onChange={(e) =>
+                      setEditedAddOns((prev) => {
+                        const updated = [...prev];
+                        updated[i] = { ...updated[i], description: e.target.value };
+                        return updated;
+                      })
+                    }
+                    className="bg-transparent border-0 border-b border-transparent focus:border-primary/30 outline-none text-sm text-muted-foreground w-full transition-colors hover:border-primary/20"
+                  />
+                </div>
+                <div className="flex-shrink-0 sm:w-32 sm:text-right">
+                  <input
+                    type="text"
+                    value={addOn.price}
+                    onChange={(e) =>
+                      setEditedAddOns((prev) => {
+                        const updated = [...prev];
+                        updated[i] = { ...updated[i], price: e.target.value };
+                        return updated;
+                      })
+                    }
+                    className="bg-transparent border-0 border-b-2 border-dashed border-primary/20 focus:border-primary outline-none font-bold text-primary text-lg w-full sm:text-right transition-colors"
+                  />
+                </div>
+              </div>
+            ))}
+            <button
+              onClick={() =>
+                setEditedAddOns((prev) => [
+                  ...prev,
+                  { name: "New Service", price: "₱0", description: "Description of the add-on service." },
+                ])
+              }
+              className="text-sm text-primary/60 hover:text-primary transition-colors flex items-center gap-1"
+            >
+              + Add service
+            </button>
+          </div>
+        </Section>
+
+        {/* 9. Next Steps */}
+        <Section number={9} title="Next Steps" delay={0.9}>
           <div className="space-y-4">
             {proposal.nextSteps.map((step, i) => (
               <div key={i} className="flex items-start gap-4">
