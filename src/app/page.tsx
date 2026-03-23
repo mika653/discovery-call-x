@@ -11,7 +11,7 @@ import IntroAnimation from "@/components/IntroAnimation";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
-  const [showIntro, setShowIntro] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
 
   const {
     currentStep,
@@ -30,20 +30,14 @@ export default function Home() {
   // Only run client-side after hydration
   useEffect(() => {
     setMounted(true);
-    // Show intro only for fresh visitors (not returning users with persisted state)
-    const stored = localStorage.getItem("discovery-call-x-storage");
-    if (!stored) {
-      setShowIntro(true);
-    }
-
     // Fix stale persisted state: if marked complete but no submission data,
     // or if currentStep is out of bounds, reset to welcome screen
+    const stored = localStorage.getItem("discovery-call-x-storage");
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
         const state = parsed?.state;
         if (state?.isComplete || (state?.currentStep >= 0 && !state?.answers)) {
-          // Stale state — reset it
           localStorage.removeItem("discovery-call-x-storage");
           resetForm();
         }
