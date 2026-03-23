@@ -105,16 +105,19 @@ export const useFormStore = create<FormState>()(
           currentSubmission: submission,
           isComplete: true,
         });
-        // Write to Firestore in the background
-        firestoreAdd(submission)
-          .then(() => {
-            console.log("Submission saved to Firestore:", submission.id);
-            alert("Success! Submission saved. Check /admin to see it.");
-          })
-          .catch((err) => {
-            console.error("Failed to save submission:", err);
-            alert("Error saving to database: " + (err as Error).message);
-          });
+        // Write to Firestore
+        try {
+          alert("Step 1: About to save to Firebase...");
+          firestoreAdd(submission)
+            .then(() => {
+              alert("Step 2: Saved successfully!");
+            })
+            .catch((err) => {
+              alert("Step 2 ERROR: " + String(err));
+            });
+        } catch (err) {
+          alert("SYNC ERROR: " + String(err));
+        }
       },
 
       resetForm: () =>
