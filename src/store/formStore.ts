@@ -4,11 +4,11 @@ import { FormAnswers, Submission, SubmissionSummary, LeadStatus } from "@/types"
 import { questions } from "@/lib/questions";
 import { generateSummary } from "@/lib/recommendations";
 import {
-  addSubmission as firestoreAdd,
-  getSubmissions as firestoreGet,
-  updateSubmissionStatus as firestoreUpdateStatus,
-  deleteSubmissionDoc as firestoreDelete,
-} from "@/lib/firestore";
+  saveSubmission,
+  fetchSubmissions,
+  updateStatus,
+  deleteSubmission as deleteSubmissionAction,
+} from "@/app/actions";
 import { v4 as uuidv4 } from "uuid";
 
 interface FormState {
@@ -45,6 +45,18 @@ function filterVisibleQuestions(answers: FormAnswers) {
     }
     return condValues.includes(depAnswer as string);
   });
+}
+
+function sanitizeAnswers(answers: FormAnswers): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(answers)) {
+    if (Array.isArray(value) && value.length > 0 && value[0] instanceof File) {
+      sanitized[key] = null;
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  return sanitized;
 }
 
 export const useFormStore = create<FormState>()(
@@ -101,20 +113,31 @@ export const useFormStore = create<FormState>()(
           businessName:
             (answers.business_name as string) || "Unnamed Business",
         };
-        // Write to Firestore BEFORE showing results
-        alert("[v7] Saving to Firebase now...");
-        firestoreAdd(submission)
-          .then(() => {
-            alert("[v7] Saved! Check /admin");
-          })
-          .catch((err) => {
-            alert("[v7] Firebase error: " + String(err));
-          });
 
         set({
           currentSubmission: submission,
           isComplete: true,
         });
+
+        // Save via server action (runs on Vercel server, not browser)
+        saveSubmission({
+          id: submission.id,
+          answers: sanitizeAnswers(submission.answers),
+          summary: submission.summary as unknown as Record<string, unknown>,
+          status: submission.status,
+          createdAt: submission.createdAt,
+          businessName: submission.businessName,
+        })
+          .then((result) => {
+            if (result.success) {
+              console.log("Submission saved via server action:", submission.id);
+            } else {
+              console.error("Server action error:", result.error);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to call server action:", err);
+          });
       },
 
       resetForm: () =>
@@ -129,39 +152,38 @@ export const useFormStore = create<FormState>()(
       loadSubmissions: async () => {
         set({ isLoadingSubmissions: true });
         try {
-          const submissions = await firestoreGet();
-          console.log("Loaded submissions from Firestore:", submissions.length, submissions);
-          if (submissions.length === 0) {
-            console.warn("Firestore returned 0 submissions. Check Firebase Console > Firestore to see if documents exist in the 'submissions' collection.");
+          const result = await fetchSubmissions();
+          if (result.success && result.submissions) {
+            set({
+              submissions: result.submissions as unknown as Submission[],
+              isLoadingSubmissions: false,
+            });
+          } else {
+            console.error("Failed to fetch:", result.error);
+            set({ isLoadingSubmissions: false });
           }
-          set({ submissions, isLoadingSubmissions: false });
         } catch (err) {
           console.error("Failed to load submissions:", err);
-          alert("Error loading submissions: " + (err as Error).message);
           set({ isLoadingSubmissions: false });
         }
       },
 
       updateLeadStatus: (id, status) => {
-        // Optimistic local update
         set((state) => ({
           submissions: state.submissions.map((s) =>
             s.id === id ? { ...s, status } : s
           ),
         }));
-        // Sync to Firestore
-        firestoreUpdateStatus(id, status).catch((err) =>
+        updateStatus(id, status).catch((err) =>
           console.error("Failed to update status:", err)
         );
       },
 
       deleteSubmission: (id) => {
-        // Optimistic local update
         set((state) => ({
           submissions: state.submissions.filter((s) => s.id !== id),
         }));
-        // Sync to Firestore
-        firestoreDelete(id).catch((err) =>
+        deleteSubmissionAction(id).catch((err) =>
           console.error("Failed to delete submission:", err)
         );
       },
