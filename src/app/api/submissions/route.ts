@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { isAdmin } from "@/lib/admin-auth";
+import { sendNewLeadNotification } from "@/lib/notification-email";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,14 @@ export async function POST(req: NextRequest) {
       );
     }
     await adminDb().collection("submissions").doc(submission.id).set(submission);
+
+    // Email notification — never fail the submission if mail fails
+    try {
+      await sendNewLeadNotification(submission);
+    } catch (mailErr) {
+      console.error("Notification email failed:", mailErr);
+    }
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("API: Failed to save submission:", err);
