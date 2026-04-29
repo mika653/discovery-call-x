@@ -58,13 +58,11 @@ function buildHtml(submission: NotifySubmission): string {
     )
     .join("");
 
-  const detailRows = [
-    ["Email", contactEmail],
-    contactPhone ? ["Phone", contactPhone] : null,
-    location ? ["Location", location] : null,
-    ["Submitted", escapeHtml(submittedAt)],
-  ]
-    .filter(Boolean)
+  const rows: Array<[string, string]> = [["Email", contactEmail]];
+  if (contactPhone) rows.push(["Phone", contactPhone]);
+  if (location) rows.push(["Location", location]);
+  rows.push(["Submitted", escapeHtml(submittedAt)]);
+  const detailRows = rows
     .map(
       ([label, value]) => `
         <tr>
