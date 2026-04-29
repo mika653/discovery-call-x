@@ -17,6 +17,8 @@ export default function Home() {
     currentStep,
     answers,
     isComplete,
+    isSubmitting,
+    submissionError,
     currentSubmission,
     setAnswer,
     nextStep,
@@ -106,6 +108,21 @@ export default function Home() {
               />
             </div>
           </div>
+
+          {(submissionError || isSubmitting) && (
+            <div className="max-w-xl mx-auto w-full px-6 pt-4">
+              {isSubmitting && (
+                <div className="rounded-lg border border-border/50 bg-card/60 px-4 py-2 text-sm text-muted-foreground text-center">
+                  Submitting your answers…
+                </div>
+              )}
+              {submissionError && !isSubmitting && (
+                <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive text-center">
+                  {submissionError}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex-1 flex items-center px-6 py-12">
             <AnimatePresence mode="wait">

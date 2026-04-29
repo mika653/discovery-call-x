@@ -23,7 +23,9 @@ import {
   Loader2,
   ArrowLeft,
   Inbox,
+  LogOut,
 } from "lucide-react";
+import { logoutAction } from "@/app/admin/actions";
 
 const statusColors: Record<LeadStatus, string> = {
   new: "bg-blue-500/15 text-blue-400 border-blue-500/30",
@@ -108,12 +110,20 @@ export default function AdminDashboard() {
                 {submissions.length !== 1 ? "s" : ""}
               </p>
             </div>
-            <a href="/">
-              <Button variant="ghost">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Form
-              </Button>
-            </a>
+            <div className="flex items-center gap-2">
+              <a href="/">
+                <Button variant="ghost">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Form
+                </Button>
+              </a>
+              <form action={logoutAction}>
+                <Button variant="ghost" type="submit" className="text-muted-foreground">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign out
+                </Button>
+              </form>
+            </div>
           </div>
         </div>
       </div>

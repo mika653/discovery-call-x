@@ -10,6 +10,8 @@ interface FormState {
   answers: FormAnswers;
   visibleQuestions: typeof questions;
   isComplete: boolean;
+  isSubmitting: boolean;
+  submissionError: string | null;
   submissions: Submission[];
   currentSubmission: Submission | null;
   isLoadingSubmissions: boolean;
@@ -19,7 +21,7 @@ interface FormState {
   prevStep: () => void;
   goToStep: (step: number) => void;
   getVisibleQuestions: () => typeof questions;
-  submitForm: () => void;
+  submitForm: () => Promise<void>;
   resetForm: () => void;
   loadSubmissions: () => Promise<void>;
   updateLeadStatus: (id: string, status: LeadStatus) => void;
@@ -60,6 +62,8 @@ export const useFormStore = create<FormState>()(
       answers: {},
       visibleQuestions: filterVisibleQuestions({}),
       isComplete: false,
+      isSubmitting: false,
+      submissionError: null,
       submissions: [],
       currentSubmission: null,
       isLoadingSubmissions: false,
@@ -95,7 +99,7 @@ export const useFormStore = create<FormState>()(
 
       getVisibleQuestions: () => filterVisibleQuestions(get().answers),
 
-      submitForm: () => {
+      submitForm: async () => {
         const { answers } = get();
         const summary: SubmissionSummary = generateSummary(answers);
         const submission: Submission = {
@@ -108,33 +112,41 @@ export const useFormStore = create<FormState>()(
             (answers.business_name as string) || "Unnamed Business",
         };
 
-        set({
-          currentSubmission: submission,
-          isComplete: true,
-        });
+        set({ isSubmitting: true, submissionError: null });
 
-        // Save via API route (runs on Vercel server, not browser Firebase SDK)
-        fetch("/api/submissions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            id: submission.id,
-            answers: sanitizeAnswers(submission.answers),
-            summary: submission.summary,
-            status: submission.status,
-            createdAt: submission.createdAt,
-            businessName: submission.businessName,
-          }),
-        })
-          .then((res) => res.json())
-          .then((result) => {
-            if (!result.success) {
-              console.error("API error:", result.error);
-            }
-          })
-          .catch((err) => {
-            console.error("Fetch failed:", err);
+        try {
+          const res = await fetch("/api/submissions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: submission.id,
+              answers: sanitizeAnswers(submission.answers),
+              summary: submission.summary,
+              status: submission.status,
+              createdAt: submission.createdAt,
+              businessName: submission.businessName,
+            }),
           });
+          const result = await res.json().catch(() => ({ success: false, error: "Bad response" }));
+          if (!res.ok || !result.success) {
+            const message = result?.error || `Request failed (${res.status})`;
+            console.error("API error:", message);
+            set({ isSubmitting: false, submissionError: String(message) });
+            return;
+          }
+          set({
+            currentSubmission: submission,
+            isComplete: true,
+            isSubmitting: false,
+            submissionError: null,
+          });
+        } catch (err) {
+          console.error("Fetch failed:", err);
+          set({
+            isSubmitting: false,
+            submissionError: "Couldn't reach the server. Check your connection and try again.",
+          });
+        }
       },
 
       resetForm: () =>
@@ -143,6 +155,8 @@ export const useFormStore = create<FormState>()(
           answers: {},
           visibleQuestions: filterVisibleQuestions({}),
           isComplete: false,
+          isSubmitting: false,
+          submissionError: null,
           currentSubmission: null,
         }),
 
